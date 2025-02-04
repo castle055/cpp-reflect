@@ -81,18 +81,23 @@ FetchContent_MakeAvailable(packtl)
 #[[                         CONFIGURE CLANG PLUGINS                          ]]#
 add_subdirectory(clang)
 
-macro(reflect_target TARGET)
-  add_dependencies(${TARGET} ReflectorPlugin)
-  FILE(GLOB_RECURSE PLUGIN_FILE CONFIGURE_DEPENDS ${REFLECTOR_PLUGIN_BINARY})
-  if(EXISTS ${REFLECTOR_PLUGIN_BINARY})
-      set_target_properties(${TARGET} PROPERTIES COMPILE_FLAGS "-fplugin=${REFLECTOR_PLUGIN_BINARY}")
-  endif()
-endmacro(reflect_target)
+macro(compile_target_with_reflection TARGET)
+    add_dependencies(${TARGET} ReflectorPlugin)
+    FILE(GLOB_RECURSE PLUGIN_FILE CONFIGURE_DEPENDS ${REFLECTOR_PLUGIN_BINARY})
+    if(EXISTS ${REFLECTOR_PLUGIN_BINARY})
+        set_target_properties(${TARGET} PROPERTIES COMPILE_FLAGS "-fplugin=${REFLECTOR_PLUGIN_BINARY}")
+    endif()
+endmacro(compile_target_with_reflection)
 
 ################################################################################
 #[[                          CONFIGURE CPP REFLECT                           ]]#
 add_library(cpp_reflect)
-reflect_target(cpp_reflect)
+compile_target_with_reflection(cpp_reflect)
+
+macro(reflect_target TARGET)
+    compile_target_with_reflection(${TARGET})
+    target_link_libraries(${TARGET} PUBLIC cpp_reflect)
+endmacro(reflect_target)
 
 FILE(GLOB_RECURSE SRC_LIST CONFIGURE_DEPENDS
         ${CPP_REFLECT_INCLUDE_DIR}/*.h
