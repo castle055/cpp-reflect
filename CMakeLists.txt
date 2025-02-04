@@ -112,7 +112,7 @@ FILE(GLOB_RECURSE SRC_MODI_LIST CONFIGURE_DEPENDS
         ${CPP_REFLECT_SOURCE_DIR}/*.cppi
 )
 
-target_include_directories(cpp_reflect PUBLIC ${CPP_REFLECT_INCLUDE_DIR})
+target_include_directories(cpp_reflect PUBLIC ${CPP_REFLECT_SOURCE_DIR})
 target_include_directories(cpp_reflect PUBLIC ${cyd_fabric_SOURCE_DIR}/include)
 target_compile_features(cpp_reflect PUBLIC cxx_std_23)
 
