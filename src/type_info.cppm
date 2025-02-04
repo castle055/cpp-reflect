@@ -135,6 +135,21 @@ export namespace refl {
         ti.pack_param_ids_ = get_pack_param_ids<T>::vector();
       }
 
+      if constexpr(std::is_copy_constructible_v<T>) {
+        ti.copy_construct_function_ = [](const void* src) -> void* {
+          const T& src_ref = *static_cast<const T*>(src);
+          T* dest = new T(src_ref);
+          return dest;
+        };
+      }
+      if constexpr(std::is_copy_assignable_v<T>) {
+        ti.copy_assign_function_ = [](void* dest, const void* src) {
+          T& dest_ref = *static_cast<T*>(dest);
+          const T& src_ref = *static_cast<const T*>(src);
+          dest_ref = src_ref;
+        };
+      }
+
       return ti;
     }
 
@@ -204,6 +219,19 @@ export namespace refl {
       return tis;
     }
 
+    void* make_copy_of(const void* ptr) const {
+      if (copy_construct_function_.has_value()) {
+        return copy_construct_function_.value()(ptr);
+      }
+      return nullptr;
+    }
+
+    void assign_copy_of(const void* src, void* dest) const {
+      if (copy_assign_function_.has_value()) {
+        copy_assign_function_.value()(dest, src);
+      }
+    }
+
   private:
     std::string name_{};
     std::vector<field_info> fields_{};
@@ -218,6 +246,9 @@ export namespace refl {
     std::optional<type_id_t> indirect_type_id_{std::nullopt};
     type_id_t pack_id_{};
     std::vector<type_id_t> pack_param_ids_{};
+
+    std::optional<std::function<void*(const void*)>> copy_construct_function_{std::nullopt};
+    std::optional<std::function<void(void*,const void*)>> copy_assign_function_{std::nullopt};
   };
 
 
