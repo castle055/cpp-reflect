@@ -44,7 +44,7 @@ namespace refl {
     }
 
     template<typename T, typename... Args>
-    static any make(Args &&args) {
+    static any make(Args&& ...args) {
       auto* ptr = new T(std::forward<Args>(args)...);
       return any {ptr};
     }
