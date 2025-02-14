@@ -247,7 +247,9 @@ export namespace refl {
     type_id_t pack_id_{};
     std::vector<type_id_t> pack_param_ids_{};
 
+    [[refl::ignore]]
     std::optional<std::function<void*(const void*)>> copy_construct_function_{std::nullopt};
+    [[refl::ignore]]
     std::optional<std::function<void(void*,const void*)>> copy_assign_function_{std::nullopt};
   };
 
