@@ -49,6 +49,12 @@ namespace refl {
       return any {ptr};
     }
 
+    template<typename T, typename... Args>
+    static any make(const Args& ...args) {
+      auto* ptr = new T(args...);
+      return any {ptr};
+    }
+
     ~any() {
       destructor_(data_);
       data_ = nullptr;
