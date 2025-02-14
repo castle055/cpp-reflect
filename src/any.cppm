@@ -13,11 +13,12 @@ namespace refl {
   export class any {
   private:
     template<typename T>
-      requires (not std::same_as<T, any>)
+      requires (not std::same_as<std::remove_reference_t<T>, any>)
     explicit any(T* t) {
+      using type = std::remove_const_t<std::remove_reference_t<T>>;
       data_       = t;
-      destructor_ = [](void* ptr) { delete static_cast<T*>(ptr); };
-      type_info_  = &type_info::from<T>();
+      destructor_ = [](void* ptr) { delete static_cast<type*>(ptr); };
+      type_info_  = &type_info::from<type>();
     }
 
   public:
@@ -28,30 +29,36 @@ namespace refl {
     }
 
     template<typename T>
-      requires (not std::same_as<T, any>)
+      requires (not std::same_as<std::remove_reference_t<T>, any>)
     any(const T &t) {
-      data_       = new T(t);
+      using type = std::remove_const_t<std::remove_reference_t<T>>;
+      data_       = new type(t);
       destructor_ = [](void* ptr) { delete static_cast<T*>(ptr); };
-      type_info_  = &type_info::from<T>();
+      type_info_  = &type_info::from<type>();
     }
 
     template<typename T>
-      requires (not std::same_as<T, any>)
+      requires (not std::same_as<std::remove_reference_t<T>, any>)
     any(T &&t) {
-      data_       = new T(std::forward<T>(t));
+      using type = std::remove_const_t<std::remove_reference_t<T>>;
+      data_       = new type(std::forward<T>(t));
       destructor_ = [](void* ptr) { delete static_cast<T*>(ptr); };
-      type_info_  = &type_info::from<T>();
+      type_info_  = &type_info::from<type>();
     }
 
     template<typename T, typename... Args>
+      requires (not std::is_reference_v<T>)
     static any make(Args&& ...args) {
-      auto* ptr = new T(std::forward<Args>(args)...);
+      using type = std::remove_const_t<std::remove_reference_t<T>>;
+      auto* ptr = new type(std::forward<Args>(args)...);
       return any {ptr};
     }
 
-    template<typename T, typename... Args>
-    static any make(const Args& ...args) {
-      auto* ptr = new T(args...);
+    template<typename T>
+      requires (not std::same_as<std::remove_reference_t<T>, any>)
+    static any make(const T& value) {
+      using type = std::remove_const_t<std::remove_reference_t<T>>;
+      auto* ptr = new type(value);
       return any {ptr};
     }
 
