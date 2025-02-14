@@ -59,46 +59,47 @@ export namespace refl {
   };
 
   class type_info {
+  private:
+    template <typename Field>
+    static field_info make_field_data() {
+      return {
+        .index = Field::index,
+        .name = Field::name,
+        .size = Field::size,
+        .offset = Field::offset,
+        .access_type = Field::access,
+        .type = []() -> type_info { return from<typename Field::type>(); },
+      };
+    }
+
   public:
 
     template <typename T>
     static const type_info& from() {
-      static constexpr type_id_t tid = type_id<T>;
-      static constexpr type_id_t pid = pack_type_id<T>;
+      using type = std::remove_const_t<std::remove_reference_t<T>>;
+      static constexpr type_id_t tid = type_id<type>;
+      static constexpr type_id_t pid = pack_type_id<type>;
 
       if (type_registry.contains(tid)) {
         return type_registry[tid];
       }
 
-      if constexpr (Reflected<T>) {
-        static constexpr std::size_t f_count = field_count<T>;
-        static constexpr std::size_t m_count = method_count<T>;
+      if constexpr (Reflected<type>) {
+        static constexpr std::size_t f_count = field_count<type>;
+        static constexpr std::size_t m_count = method_count<type>;
 
         type_info ti{};
 
         [&]<std::size_t... I>(std::index_sequence<I...>) {
-          (
-            [&]<typename Field>(Field) {
-              static std::size_t off = Field::offset;
-              ti.fields_.push_back({
-                .index       = Field::index,
-                .name        = Field::name,
-                .size        = Field::size,
-                .offset      = off,
-                .access_type = Field::access,
-                .type        = []() -> type_info { return from<typename Field::type>(); },
-              });
-            }(field<T, I>{}),
-            ...
-          );
+          (ti.fields_.push_back(make_field_data<field<type, I>>()), ...);
         }(std::make_index_sequence<f_count>{});
 
         [&]<std::size_t... I>(std::index_sequence<I...>) {
           (ti.methods_.push_back({
              // .type        = []() -> type_info { return from<typename field<T, I>::type>(); },
              .index       = I,
-             .name        = method<T, I>::name,
-             .access_type = method<T, I>::access,
+             .name        = method<type, I>::name,
+             .access_type = method<type, I>::access,
            }),
            ...);
         }(std::make_index_sequence<m_count>{});
