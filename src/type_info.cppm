@@ -133,20 +133,20 @@ export namespace refl {
 
       if constexpr (pid != 0) {
         ti.pack_id_ = pid;
-        ti.pack_param_ids_ = get_pack_param_ids<T>::vector();
+        ti.pack_param_ids_ = get_pack_param_ids<type>::vector();
       }
 
-      if constexpr(std::is_copy_constructible_v<T>) {
+      if constexpr(std::is_copy_constructible_v<type>) {
         ti.copy_construct_function_ = [](const void* src) -> void* {
-          const T& src_ref = *static_cast<const T*>(src);
-          T* dest = new T(src_ref);
+          const type& src_ref = *static_cast<const type*>(src);
+          type* dest = new type(src_ref);
           return dest;
         };
       }
-      if constexpr(std::is_copy_assignable_v<T>) {
+      if constexpr(std::is_copy_assignable_v<type>) {
         ti.copy_assign_function_ = [](void* dest, const void* src) {
-          T& dest_ref = *static_cast<T*>(dest);
-          const T& src_ref = *static_cast<const T*>(src);
+          type& dest_ref = *static_cast<type*>(dest);
+          const type& src_ref = *static_cast<const type*>(src);
           dest_ref = src_ref;
         };
       }
