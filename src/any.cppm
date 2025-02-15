@@ -94,6 +94,11 @@ namespace refl {
       return type_info_->is_type<T>();
     }
 
+    bool is(const refl::type_info& tinfo) const {
+      if (type_info_ == nullptr) return false;
+      return type_info_->id() == tinfo.id();
+    }
+
     template<typename T>
     T &as() {
       if (not is<T>()) { throw std::bad_cast(); }
