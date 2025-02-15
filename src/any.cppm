@@ -120,6 +120,14 @@ namespace refl {
       return data_ == nullptr or type_info_ == nullptr;
     }
 
+    void* data() {
+      return data_;
+    }
+
+    const void* data() const {
+      return data_;
+    }
+
   private:
     void* data_;
     std::function<void(void*)> destructor_;
