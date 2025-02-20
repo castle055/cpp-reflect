@@ -24,7 +24,7 @@ export namespace refl {
     std::size_t size;
     std::size_t offset;
     access_spec access_type;
-    std::function<type_info()> type;
+    std::function<const type_info&()> type;
 
     // Accessors
     void* get_ptr(void* obj) const {
@@ -68,7 +68,7 @@ export namespace refl {
         .size = Field::size,
         .offset = Field::offset,
         .access_type = Field::access,
-        .type = []() -> type_info { return from<typename Field::type>(); },
+        .type = []() -> const type_info& { return from<typename Field::type>(); },
       };
     }
 
