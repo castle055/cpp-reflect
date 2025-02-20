@@ -149,7 +149,7 @@ namespace refl {
     }
 
     template<typename T>
-      requires (not std::same_as<std::remove_reference_t<T>, any_ref>)
+      requires (not std::same_as<std::remove_reference_t<T>, any_ref> and not std::same_as<std::remove_reference_t<T>, any>)
     any_ref(T &t) {
       using type = std::remove_const_t<std::remove_reference_t<T>>;
       data_       = &t;
@@ -157,7 +157,7 @@ namespace refl {
     }
 
     template<typename T>
-      requires (not std::same_as<std::remove_reference_t<T>, any_ref>)
+      requires (not std::same_as<std::remove_reference_t<T>, any_ref> and not std::same_as<std::remove_reference_t<T>, any>)
     any_ref(T *t) {
       using type = std::remove_const_t<std::remove_reference_t<T>>;
       data_       = t;
@@ -168,6 +168,12 @@ namespace refl {
       any_ref a{};
       a.data_ = ptr;
       a.type_info_ = &t_info;
+    }
+
+    any_ref(refl::any& owner_any) {
+      any_ref a{};
+      a.data_ = owner_any.data();
+      a.type_info_ = &owner_any.type();
     }
 
 
