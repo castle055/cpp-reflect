@@ -28,13 +28,40 @@ export namespace refl {
 
     // Accessors
     void* get_ptr(void* obj) const {
-      return (char*)obj + offset;
+      return static_cast<char *>(obj) + offset;
     }
 
     template <typename T>
     T& get_ref(void* obj) const {
-      return *((T*)get_ptr(obj));
+      return *static_cast<T *>(get_ptr(obj));
     }
+  };
+
+  struct field_path {
+    friend std::hash<refl::field_path>;
+
+    explicit field_path(std::initializer_list<const field_info*> fields): fields_(fields) { }
+
+    void* get_ptr(void* obj) const {
+      void* ptr = obj;
+
+      for (const field_info* field : fields_) {
+        ptr = field->get_ptr(ptr);
+      }
+
+      return ptr;
+    }
+
+    template <typename T>
+    T& get_ref(void* obj) const {
+      return *static_cast<T *>(get_ptr(obj));
+    }
+
+    bool operator==(const field_path& other) const {
+      return fields_ == other.fields_;
+    }
+  private:
+    std::vector<const field_info*> fields_;
   };
 
   struct method_info {
@@ -300,3 +327,15 @@ export namespace refl {
     return ids;
   }
 }
+
+export template<>
+struct std::hash<refl::field_path> {
+  std::size_t operator()(const refl::field_path& path) const {
+    std::size_t seed = path.fields_.size();
+    for (const auto &v: path.fields_) {
+      seed ^= std::hash<std::size_t>{}(reinterpret_cast<std::size_t>(v)) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    }
+    return seed;
+  }
+};
+
