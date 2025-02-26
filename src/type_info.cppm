@@ -72,6 +72,27 @@ export namespace refl {
       };
     }
 
+    template <typename Field>
+    void push_field() {
+      fields_.push_back(make_field_data<Field>());
+      const auto& field = fields_.back();
+
+      fields_by_name_[field.name] = &field;
+      fields_by_offset_[field.offset] = &field;
+    }
+
+    template <typename Method>
+    void push_method() {
+      methods_.push_back({
+        // .type        = []() -> type_info { return from<typename field<T, I>::type>(); },
+        .index = Method::index,
+        .name = Method::name,
+        .access_type = Method::access,
+      });
+      const auto& method = methods_.back();
+
+      methods_by_name_[method.name] = &method;
+    }
   public:
 
     template <typename T>
@@ -91,17 +112,11 @@ export namespace refl {
         type_info ti{};
 
         [&]<std::size_t... I>(std::index_sequence<I...>) {
-          (ti.fields_.push_back(make_field_data<field<type, I>>()), ...);
+          (ti.push_field<field<type, I>>(), ...);
         }(std::make_index_sequence<f_count>{});
 
         [&]<std::size_t... I>(std::index_sequence<I...>) {
-          (ti.methods_.push_back({
-             // .type        = []() -> type_info { return from<typename field<T, I>::type>(); },
-             .index       = I,
-             .name        = method<type, I>::name,
-             .access_type = method<type, I>::access,
-           }),
-           ...);
+          (ti.push_method<method<type, I>>(), ...);
         }(std::make_index_sequence<m_count>{});
 
         ti.type_id_ = tid;
@@ -160,6 +175,19 @@ export namespace refl {
 
     const auto& fields() const {
       return fields_;
+    }
+
+    std::optional<const auto*> field_by_name(const std::string& name) const {
+      if (fields_by_name_.contains(name)) {
+        return fields_by_name_.at(name);
+      }
+      return std::nullopt;
+    }
+    std::optional<const auto*> field_by_offset(const std::size_t& offset) const {
+      if (fields_by_offset_.contains(offset)) {
+        return fields_by_offset_.at(offset);
+      }
+      return std::nullopt;
     }
 
     std::size_t hash_code() const {
@@ -236,7 +264,10 @@ export namespace refl {
   private:
     std::string name_{};
     std::vector<field_info> fields_{};
+    std::unordered_map<std::string, const field_info*> fields_by_name_{};
+    std::unordered_map<std::size_t, const field_info*> fields_by_offset_{};
     std::vector<method_info> methods_{};
+    std::unordered_map<std::string, const method_info*> methods_by_name_{};
 
     bool is_const_ = false;
     bool is_lval_ref_ = false;
