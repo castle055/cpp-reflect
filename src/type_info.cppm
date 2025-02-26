@@ -209,13 +209,13 @@ export namespace refl {
       return fields_;
     }
 
-    std::optional<const auto*> field_by_name(const std::string& name) const {
+    std::optional<const field_info*> field_by_name(const std::string& name) const {
       if (fields_by_name_.contains(name)) {
         return fields_by_name_.at(name);
       }
       return std::nullopt;
     }
-    std::optional<const auto*> field_by_offset(const std::size_t& offset) const {
+    std::optional<const field_info*> field_by_offset(const std::size_t& offset) const {
       if (fields_by_offset_.contains(offset)) {
         return fields_by_offset_.at(offset);
       }
