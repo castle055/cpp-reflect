@@ -40,7 +40,8 @@ export namespace refl {
   struct field_path {
     friend std::hash<refl::field_path>;
 
-    explicit field_path(std::initializer_list<const field_info*> fields): fields_(fields) { }
+    field_path(const field_info* field): fields_{field} { }
+    field_path(std::initializer_list<const field_info*> fields): fields_(fields) { }
 
     const type_info& type() const {
       return fields_.back()->type();
