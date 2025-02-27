@@ -124,7 +124,7 @@ namespace refl::deep_eq_impl {
     const auto& field2 = field_data::from_instance(rhs);
 
     eq_policy::policy_e policy{eq_policy::deep};
-    if (field_data::template has_metadata<eq_policy::policy_e>) {
+    if constexpr (field_data::template has_metadata<eq_policy::policy_e>) {
       policy = field_data::template get_metadata<eq_policy::policy_e>;
     }
 
