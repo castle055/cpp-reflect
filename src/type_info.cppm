@@ -26,7 +26,7 @@ export namespace refl {
     std::size_t offset;
     access_spec access_type;
     [[refl::ignore]]
-    std::function<const type_info&()> type;
+    const type_info& (*type)();
 
     // Accessors
     void* get_ptr(void* obj) const {
@@ -94,6 +94,11 @@ export namespace refl {
 
   class type_info {
   private:
+    template <typename Type>
+    static const type_info& type_getter() {
+      return from<Type>();
+    }
+
     template <typename Field>
     static field_info make_field_data() {
       return {
@@ -102,7 +107,7 @@ export namespace refl {
         .size = Field::size,
         .offset = Field::offset,
         .access_type = Field::access,
-        .type = []() -> const type_info& { return from<typename Field::type>(); },
+        .type = &type_getter<typename Field::type>,
       };
     }
 
@@ -317,10 +322,10 @@ export namespace refl {
 
   private:
     std::string name_{};
-    std::vector<field_info> fields_{};
+    std::list<field_info> fields_{};
     std::unordered_map<std::string, const field_info*> fields_by_name_{};
     std::unordered_map<std::size_t, const field_info*> fields_by_offset_{};
-    std::vector<method_info> methods_{};
+    std::list<method_info> methods_{};
     std::unordered_map<std::string, const method_info*> methods_by_name_{};
 
     bool is_const_ = false;
