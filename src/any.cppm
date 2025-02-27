@@ -144,7 +144,7 @@ namespace refl {
 
   private:
     void* data_;
-    [[meta(eq_policy::skip)]]
+    [[refl::ignore]]
     std::function<void(void*)> destructor_;
     [[meta(eq_policy::shallow)]]
     const type_info* type_info_;

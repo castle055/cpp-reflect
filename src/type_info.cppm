@@ -25,6 +25,7 @@ export namespace refl {
     std::size_t size;
     std::size_t offset;
     access_spec access_type;
+    [[refl::ignore]]
     std::function<const type_info&()> type;
 
     // Accessors
@@ -198,17 +199,17 @@ export namespace refl {
           dest_ref = src_ref;
         };
       }
-      if constexpr (requires(type v1, type v2) { { v1 == v2 } -> std::same_as<bool>; }) {
-        ti.equality_function_ = [](const void* lhs, const void* rhs) {
-          const type& LHS = *static_cast<const type*>(lhs);
-          const type& RHS = *static_cast<const type*>(rhs);
-          return LHS == RHS;
-        };
-      } else if constexpr(Reflected<type>) {
+      if constexpr(Reflected<type>) {
         ti.equality_function_ = [](const void* lhs, const void* rhs) {
           const type& LHS = *static_cast<const type*>(lhs);
           const type& RHS = *static_cast<const type*>(rhs);
           return deep_eq(LHS, RHS);
+        };
+      } else if constexpr (std::equality_comparable<type>) {
+        ti.equality_function_ = [](const void* lhs, const void* rhs) {
+          const type& LHS = *static_cast<const type*>(lhs);
+          const type& RHS = *static_cast<const type*>(rhs);
+          return LHS == RHS;
         };
       }
 
