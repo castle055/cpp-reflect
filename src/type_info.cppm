@@ -205,7 +205,7 @@ export namespace refl {
           const type& RHS = *static_cast<const type*>(rhs);
           return deep_eq(LHS, RHS);
         };
-      } else if constexpr (std::equality_comparable<type>) {
+      } else if constexpr (std::equality_comparable<type> and not std::is_function_v<type>) {
         ti.equality_function_ = [](const void* lhs, const void* rhs) {
           const type& LHS = *static_cast<const type*>(lhs);
           const type& RHS = *static_cast<const type*>(rhs);
