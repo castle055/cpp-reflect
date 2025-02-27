@@ -15,6 +15,14 @@ import packtl;
 import :types;
 import :accessors;
 
+export namespace refl::eq_policy {
+  enum policy_e {
+    shallow,
+    deep,
+    skip
+  };
+}
+
 export namespace refl {
   template <Reflected R>
   bool deep_eq(const R& lhs, const R& rhs);
@@ -115,23 +123,40 @@ namespace refl::deep_eq_impl {
     const auto& field1 = field_data::from_instance(lhs);
     const auto& field2 = field_data::from_instance(rhs);
 
+    eq_policy::policy_e policy{eq_policy::deep};
+    if (field_data::template has_metadata<eq_policy::policy_e>) {
+      policy = field_data::template get_metadata<eq_policy::policy_e>;
+    }
+
+    if (policy == eq_policy::skip) {
+      return true;
+    }
+
     if constexpr (field_data::is_reference) {
-      if (&field1 == &field2) {
-        return true;
-      }
+      if (policy == eq_policy::deep) {
+        if (&field1 == &field2) {
+          return true;
+        }
 
-      using field_type = std::remove_reference_t<typename field_data::type>;
-      return ref_eq<field_type>(field1, field2);
+        using field_type = std::remove_reference_t<typename field_data::type>;
+        return ref_eq<field_type>(field1, field2);
+      } else if (policy == eq_policy::shallow) {
+        return &field1 == &field2;
+      }
     } else if constexpr (field_data::is_pointer) {
-      if (field1 == field2) {
-        return true;
-      }
+      if (policy == eq_policy::deep) {
+        if (field1 == field2) {
+          return true;
+        }
 
-      using field_type = std::remove_pointer_t<typename field_data::type>;
-      if constexpr (std::is_void_v<field_type>) {
-        return false;
-      } else {
-        return ref_eq<field_type>(*field1, *field2);
+        using field_type = std::remove_pointer_t<typename field_data::type>;
+        if constexpr (std::is_void_v<field_type>) {
+          return false;
+        } else {
+          return ref_eq<field_type>(*field1, *field2);
+        }
+      } else if (policy == eq_policy::shallow) {
+        return field1 == field2;
       }
     } else {
       using field_type = typename field_data::type;
