@@ -13,6 +13,7 @@ export import std;
 export import :types;
 export import :type_name;
 export import :accessors;
+export import :equality;
 
 export namespace refl {
   class type_info;
@@ -197,6 +198,19 @@ export namespace refl {
           dest_ref = src_ref;
         };
       }
+      if constexpr(std::equality_comparable<type>) {
+        ti.equality_function_ = [](const void* lhs, const void* rhs) {
+          const type& LHS = *static_cast<const type*>(lhs);
+          const type& RHS = *static_cast<const type*>(rhs);
+          return LHS == RHS;
+        };
+      } else if constexpr(Reflected<type>) {
+        ti.equality_function_ = [](const void* lhs, const void* rhs) {
+          const type& LHS = *static_cast<const type*>(lhs);
+          const type& RHS = *static_cast<const type*>(rhs);
+          return deep_eq(LHS, RHS);
+        };
+      }
 
       return ti;
     }
@@ -293,6 +307,13 @@ export namespace refl {
       }
     }
 
+    bool equality(const void* lhs, const void* rhs) const {
+      if (equality_function_.has_value()) {
+        return equality_function_.value()(lhs, rhs);
+      }
+      return false;
+    }
+
   private:
     std::string name_{};
     std::vector<field_info> fields_{};
@@ -315,6 +336,8 @@ export namespace refl {
     std::optional<std::function<void*(const void*)>> copy_construct_function_{std::nullopt};
     [[refl::ignore]]
     std::optional<std::function<void(void*,const void*)>> copy_assign_function_{std::nullopt};
+    [[refl::ignore]]
+    std::optional<std::function<bool(const void*,const void*)>> equality_function_{std::nullopt};
   };
 
 
