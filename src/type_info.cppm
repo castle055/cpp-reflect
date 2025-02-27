@@ -198,7 +198,7 @@ export namespace refl {
           dest_ref = src_ref;
         };
       }
-      if constexpr(std::equality_comparable<type>) {
+      if constexpr (requires(type v1, type v2) { { v1 == v2 } -> std::same_as<bool>; }) {
         ti.equality_function_ = [](const void* lhs, const void* rhs) {
           const type& LHS = *static_cast<const type*>(lhs);
           const type& RHS = *static_cast<const type*>(rhs);
