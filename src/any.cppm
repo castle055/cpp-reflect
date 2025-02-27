@@ -135,6 +135,13 @@ namespace refl {
       return data_;
     }
 
+    bool operator==(const any &other) const {
+      if (data_ == nullptr) {
+        return type_info_ == other.type_info_;
+      }
+      return type_info_ == other.type_info_ and type_info_->equality(data_, other.data_);
+    }
+
   private:
     void* data_;
     std::function<void(void*)> destructor_;
