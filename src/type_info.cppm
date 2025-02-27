@@ -144,11 +144,11 @@ export namespace refl {
         return type_registry[tid];
       }
 
+      type_registry.emplace(tid, type_info{});
+      type_info &ti = type_registry.at(tid);
       if constexpr (Reflected<type>) {
         static constexpr std::size_t f_count = field_count<type>;
         static constexpr std::size_t m_count = method_count<type>;
-
-        type_info ti{};
 
         [&]<std::size_t... I>(std::index_sequence<I...>) {
           (ti.push_field<field<type, I>>(), ...);
@@ -160,16 +160,11 @@ export namespace refl {
 
         ti.type_id_ = tid;
         ti.name_ = type_name<T>;
-
-        type_registry.emplace(tid, ti);
       } else {
-        type_info ti{};
         ti.type_id_ = tid;
         ti.name_ = type_name<T>;
-        type_registry.emplace(tid, ti);
       }
 
-      type_info& ti = type_registry[tid];
       if constexpr (std::is_const_v<T>) {
         ti.is_const_ = true;
       }
