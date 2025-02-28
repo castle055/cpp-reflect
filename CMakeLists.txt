@@ -50,12 +50,13 @@ set(CMAKE_BUILD_TYPE "Release" CACHE STRING "")
 
 cmake_minimum_required(VERSION 3.29.20240518 FATAL_ERROR)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-project(cpp_reflect LANGUAGES CXX)
-
+set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD "0e5b6991-d74f-4b3d-a41c-cf096e0b2508")
+set(CMAKE_CXX_MODULE_STD ON)
 set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_STANDARD_REQUIRED YES)
-set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -pthread")
+
+project(cpp_reflect LANGUAGES CXX)
 
 SET(CPP_REFLECT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 SET(CPP_REFLECT_TEST_DIR ${CPP_REFLECT_DIR}/test)
@@ -81,12 +82,24 @@ FetchContent_MakeAvailable(packtl)
 #[[                         CONFIGURE CLANG PLUGINS                          ]]#
 add_subdirectory(clang)
 
+if(CPP_REFLECT_PLUGIN_BUILD)
+    return()
+endif()
+
+if(NOT EXISTS ${REFLECTOR_PLUGIN_BINARY})
+    execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}"
+            -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+            -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+            -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
+            -DCPP_REFLECT_PLUGIN_BUILD=ON
+            ${CMAKE_SOURCE_DIR}
+            WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
+    execute_process(COMMAND ${CMAKE_COMMAND} --build . --target ReflectorPlugin
+            WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
+endif()
+
 macro(compile_target_with_reflection TARGET)
-    add_dependencies(${TARGET} ReflectorPlugin)
-    FILE(GLOB_RECURSE PLUGIN_FILE CONFIGURE_DEPENDS ${REFLECTOR_PLUGIN_BINARY})
-    if(EXISTS ${REFLECTOR_PLUGIN_BINARY})
-        set_target_properties(${TARGET} PROPERTIES COMPILE_FLAGS "-fplugin=${REFLECTOR_PLUGIN_BINARY}")
-    endif()
+    set_target_properties(${TARGET} PROPERTIES COMPILE_FLAGS "-fplugin=${REFLECTOR_PLUGIN_BINARY}")
 endmacro(compile_target_with_reflection)
 
 ################################################################################
