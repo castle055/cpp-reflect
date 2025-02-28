@@ -92,10 +92,10 @@ if(NOT EXISTS ${REFLECTOR_PLUGIN_BINARY})
             -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
             -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
             -DCPP_REFLECT_PLUGIN_BUILD=ON
-            ${CMAKE_SOURCE_DIR}
-            WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
+            ${CMAKE_CURRENT_SOURCE_DIR}
+            WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
     execute_process(COMMAND ${CMAKE_COMMAND} --build . --target ReflectorPlugin
-            WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
+            WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 endif()
 
 macro(compile_target_with_reflection TARGET)
