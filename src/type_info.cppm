@@ -141,7 +141,7 @@ namespace refl {
       [&]<std::size_t... I>(std::index_sequence<I...>) {
         (field.metadata.emplace_back( //
           &type_getter<typename Field::template metadata_type<I> >,
-          new typename Field::template metadata_type<I>{Field::template metadata_item<I>}), ...);
+          static_cast<void*>(new std::remove_const_t<typename Field::template metadata_type<I>>{Field::template metadata_item<I>})), ...);
       }(std::make_index_sequence<Field::metadata_count>{});
 
       return field;
