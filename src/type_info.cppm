@@ -15,18 +15,22 @@ export import :type_name;
 export import :accessors;
 export import :equality;
 
-export namespace refl {
-  class type_info;
+namespace refl {
+  export class type_info;
   std::map<type_id_t, type_info> type_registry {};
 
-  struct field_info {
+  type_id_t get_id_from_info_getter(const type_info& (*tif)());
+
+  export struct field_info {
     std::size_t index;
     std::string name;
     std::size_t size;
     std::size_t offset;
     access_spec access_type;
+    type_id_t type_id;
     [[refl::ignore]]
     const type_info& (*type)();
+    std::vector<std::pair<const type_info& (*)(), void*>> metadata;
 
     // Accessors
     void* get_ptr(void* obj) const {
@@ -37,9 +41,31 @@ export namespace refl {
     T& get_ref(void* obj) const {
       return *static_cast<T *>(get_ptr(obj));
     }
+
+    template <typename MetadataType>
+    bool has_metadata() const {
+      static constexpr type_id_t t_id = refl::type_id<MetadataType>;
+      for (const auto & [tif, ptr] : metadata) {
+        if (t_id == get_id_from_info_getter(tif)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    template <typename MetadataType>
+    const MetadataType& get_metadata() const {
+      static constexpr type_id_t t_id = refl::type_id<MetadataType>;
+      for (const auto & [tif, ptr] : metadata) {
+        if (t_id == get_id_from_info_getter(tif)) {
+          return *static_cast<const MetadataType*>(ptr);
+        }
+      }
+      throw std::runtime_error("Could not find metadata type");
+    }
   };
 
-  struct field_path {
+  export struct field_path {
     friend std::hash<refl::field_path>;
 
     field_path(const field_info* field): fields_{field} { }
@@ -71,13 +97,13 @@ export namespace refl {
     std::vector<const field_info*> fields_;
   };
 
-  struct method_info {
+  export struct method_info {
     std::size_t index;
     std::string name;
     access_spec access_type;
   };
 
-  template <typename T>
+  export template <typename T>
   struct get_pack_param_ids {
     static std::vector<type_id_t> vector() {
       return {};
@@ -101,14 +127,24 @@ export namespace refl {
 
     template <typename Field>
     static field_info make_field_data() {
-      return {
+      field_info field {
         .index = Field::index,
         .name = Field::name,
         .size = Field::size,
         .offset = Field::offset,
         .access_type = Field::access,
+        .type_id = Field::type_id,
         .type = &type_getter<typename Field::type>,
       };
+      field.metadata.reserve(Field::metadata_count);
+
+      [&]<std::size_t... I>(std::index_sequence<I...>) {
+        (field.metadata.emplace_back( //
+          &type_getter<typename Field::template metadata_type<I> >,
+          new typename Field::template metadata_type<I>{Field::template metadata_item<I>}), ...);
+      }(std::make_index_sequence<Field::metadata_count>{});
+
+      return field;
     }
 
     template <typename Field>
@@ -354,6 +390,11 @@ export namespace refl {
     ids.push_back(type_info::from<T>().id());
     ids.push_back(I);
     return ids;
+  }
+
+
+  type_id_t get_id_from_info_getter(const type_info& (*tif)()) {
+    return tif().id();
   }
 }
 
