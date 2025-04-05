@@ -24,23 +24,23 @@ export namespace refl::eq_policy {
 }
 
 export namespace refl {
-  template <Reflected R>
-  bool deep_eq(const R& lhs, const R& rhs);
+  template<Reflected R>
+  bool deep_eq(const R &lhs, const R &rhs);
 }
 
 namespace refl::deep_eq_impl {
-  template <typename T>
-  bool ref_eq(const T& lhs, const T& rhs);
+  template<typename T>
+  bool ref_eq(const T &lhs, const T &rhs);
 
-  template <typename I>
-  bool std_iterable_eq(const I& lhs, const I& rhs) {
+  template<typename I>
+  bool std_iterable_eq(const I &lhs, const I &rhs) {
     using T = typename I::value_type;
 
     if (lhs.size() != rhs.size()) {
       return false;
     }
     for (auto it1 = lhs.begin(), it2 = rhs.begin(); it1 != lhs.end() && it2 != rhs.end();
-         ++it1, ++it2) {
+      ++it1, ++it2) {
       if (not ref_eq<T>(*it1, *it2)) {
         return false;
       }
@@ -48,8 +48,8 @@ namespace refl::deep_eq_impl {
     return true;
   }
 
-  template <typename P>
-  bool std_pair_eq(const P& lhs, const P& rhs) {
+  template<typename P>
+  bool std_pair_eq(const P &lhs, const P &rhs) {
     using T1 = typename P::first_type;
     using T2 = typename P::second_type;
 
@@ -63,15 +63,15 @@ namespace refl::deep_eq_impl {
     return true;
   }
 
-  template <typename I>
-  bool std_map_eq(const I& lhs, const I& rhs) {
+  template<typename I>
+  bool std_map_eq(const I &lhs, const I &rhs) {
     using T = typename I::value_type;
 
     if (lhs.size() != rhs.size()) {
       return false;
     }
     for (auto it1 = lhs.begin(), it2 = rhs.begin(); it1 != lhs.end() && it2 != rhs.end();
-         ++it1, ++it2) {
+      ++it1, ++it2) {
       if (not std_pair_eq<T>(*it1, *it2)) {
         return false;
       }
@@ -79,14 +79,21 @@ namespace refl::deep_eq_impl {
     return true;
   }
 
-  template <typename F>
-  bool std_function_eq(const F& lhs, const F& rhs) {
+  template<typename F>
+  bool std_function_eq(const F &lhs, const F &rhs) {
     // I know this isn't correct, but properly comparing an std::function is impossible in C++
     return lhs.target_type() == rhs.target_type();
   }
 
-  template <typename T>
-  bool ref_eq(const T& lhs, const T& rhs) {
+  template<typename... Ts>
+  bool std_tuple_eq(const std::tuple<Ts...> &lhs, const std::tuple<Ts...> &rhs) {
+    return [&]<std::size_t ... I>(std::index_sequence<I...>) -> bool {
+      return (ref_eq(std::get<I>(lhs), std::get<I>(rhs)) and ...);
+    }(std::make_index_sequence<sizeof...(Ts)> { });
+  }
+
+  template<typename T>
+  bool ref_eq(const T &lhs, const T &rhs) {
     if constexpr (packtl::is_type<std::vector, T>::value) {
       return std_iterable_eq(lhs, rhs);
     } else if constexpr (packtl::is_type<std::list, T>::value) {
@@ -109,6 +116,8 @@ namespace refl::deep_eq_impl {
       return std_pair_eq(lhs, rhs);
     } else if constexpr (packtl::is_type<std::function, T>::value) {
       return std_function_eq(lhs, rhs);
+    } else if constexpr (packtl::is_type<std::tuple, T>::value) {
+      return std_tuple_eq(lhs, rhs);
     } else if constexpr (std::equality_comparable<T>) {
       return lhs == rhs;
     } else if constexpr (Reflected<T>) {
@@ -118,12 +127,12 @@ namespace refl::deep_eq_impl {
     }
   }
 
-  template <Reflected R, typename field_data>
-  bool field_eq(const R& lhs, const R& rhs) {
-    const auto& field1 = field_data::from_instance(lhs);
-    const auto& field2 = field_data::from_instance(rhs);
+  template<Reflected R, typename field_data>
+  bool field_eq(const R &lhs, const R &rhs) {
+    const auto &field1 = field_data::from_instance(lhs);
+    const auto &field2 = field_data::from_instance(rhs);
 
-    eq_policy::policy_e policy{eq_policy::deep};
+    eq_policy::policy_e policy {eq_policy::deep};
     if constexpr (field_data::template has_metadata<eq_policy::policy_e>) {
       policy = field_data::template get_metadata<eq_policy::policy_e>;
     }
@@ -168,14 +177,14 @@ namespace refl::deep_eq_impl {
 } // namespace refl::deep_eq_impl
 
 namespace refl {
-  template <Reflected R>
-  bool deep_eq(const R& lhs, const R& rhs) {
+  template<Reflected R>
+  bool deep_eq(const R &lhs, const R &rhs) {
     static constexpr auto count = field_count<R>;
 
     auto impl = [&]<std::size_t... I>(std::index_sequence<I...>) {
       return ((deep_eq_impl::field_eq<R, field<R, I>>(lhs, rhs)) && ...);
     };
 
-    return impl(std::make_index_sequence<count>{});
+    return impl(std::make_index_sequence<count> { });
   }
 }
