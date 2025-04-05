@@ -94,7 +94,7 @@ namespace refl::deep_eq_impl {
     } else if constexpr (packtl::is_type<std::deque, T>::value) {
       return std_iterable_eq(lhs, rhs);
     } else if constexpr (packtl::is_type<std::queue, T>::value) {
-      return std_iterable_eq(lhs, rhs);
+      return std_iterable_eq(lhs.__get_container(), rhs.__get_container());
     } else if constexpr (packtl::is_type<std::stack, T>::value) {
       return std_iterable_eq(lhs, rhs);
     } else if constexpr (packtl::is_type<std::map, T>::value) {
