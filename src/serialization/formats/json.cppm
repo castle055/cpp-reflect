@@ -86,7 +86,10 @@ export namespace formats {
         }
         visited_.emplace((std::size_t)&it);
       } else if constexpr (std::is_convertible_v<T, std::string>) {
-        current() = std::format("{}", it);
+        current() = std::format("{}", std::string{itcsc
+
+
+          );
       } else if constexpr (std::same_as<T, char*>) {
         current() = std::format("{}", std::string{it});
         return;
