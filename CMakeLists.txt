@@ -170,7 +170,7 @@ endif ()
 ################################################################################
 if (CPP_REFLECT_DEV_MODE AND CPP_REFLECT_BUILD_DOCS)
     target_configure_doxygen(cpp_reflect
-            DOXYFILE ${CPP_REFLECT_DIR}/Doxyfile
+            DOXYFILE ${CPP_REFLECT_DIR}/docs/Doxyfile
             BASE_DIR ${CPP_REFLECT_DIR}
     )
 endif ()
