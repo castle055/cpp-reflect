@@ -13,37 +13,97 @@ export import std;
 export import :types;
 export import :type_name;
 export import :accessors;
+export import :equality;
 
-export namespace refl {
-  class type_info;
+namespace refl {
+  export class type_info;
   std::map<type_id_t, type_info> type_registry {};
 
-  struct field_info {
+  type_id_t get_id_from_info_getter(const type_info& (*tif)());
+
+  export struct field_info {
     std::size_t index;
     std::string name;
     std::size_t size;
     std::size_t offset;
     access_spec access_type;
-    std::function<type_info()> type;
+    type_id_t type_id;
+    [[refl::ignore]]
+    const type_info& (*type)();
+    std::vector<std::pair<const type_info& (*)(), void*>> metadata;
 
     // Accessors
     void* get_ptr(void* obj) const {
-      return (char*)obj + offset;
+      return static_cast<char *>(obj) + offset;
     }
 
     template <typename T>
     T& get_ref(void* obj) const {
-      return *((T*)get_ptr(obj));
+      return *static_cast<T *>(get_ptr(obj));
+    }
+
+    template <typename MetadataType>
+    bool has_metadata() const {
+      static constexpr type_id_t t_id = refl::type_id<MetadataType>;
+      for (const auto & [tif, ptr] : metadata) {
+        if (t_id == get_id_from_info_getter(tif)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    template <typename MetadataType>
+    const MetadataType& get_metadata() const {
+      static constexpr type_id_t t_id = refl::type_id<MetadataType>;
+      for (const auto & [tif, ptr] : metadata) {
+        if (t_id == get_id_from_info_getter(tif)) {
+          return *static_cast<const MetadataType*>(ptr);
+        }
+      }
+      throw std::runtime_error("Could not find metadata type");
     }
   };
 
-  struct method_info {
+  export struct field_path {
+    friend std::hash<refl::field_path>;
+
+    field_path(const field_info* field): fields_{field} { }
+    field_path(std::initializer_list<const field_info*> fields): fields_(fields) { }
+
+    const type_info& type() const {
+      return fields_.back()->type();
+    }
+
+    void* get_ptr(void* obj) const {
+      void* ptr = obj;
+
+      for (const field_info* field : fields_) {
+        ptr = field->get_ptr(ptr);
+      }
+
+      return ptr;
+    }
+
+    template <typename T>
+    T& get_ref(void* obj) const {
+      return *static_cast<T *>(get_ptr(obj));
+    }
+
+    bool operator==(const field_path& other) const {
+      return fields_ == other.fields_;
+    }
+  private:
+    std::vector<const field_info*> fields_;
+  };
+
+  export struct method_info {
     std::size_t index;
     std::string name;
     access_spec access_type;
   };
 
-  template <typename T>
+  export template <typename T>
   struct get_pack_param_ids {
     static std::vector<type_id_t> vector() {
       return {};
@@ -59,62 +119,88 @@ export namespace refl {
   };
 
   class type_info {
+  private:
+    template <typename Type>
+    static const type_info& type_getter() {
+      return from<Type>();
+    }
+
+    template <typename Field>
+    static field_info make_field_data() {
+      field_info field {
+        .index = Field::index,
+        .name = Field::name,
+        .size = Field::size,
+        .offset = Field::offset,
+        .access_type = Field::access,
+        .type_id = Field::type_id,
+        .type = &type_getter<typename Field::type>,
+      };
+      field.metadata.reserve(Field::metadata_count);
+
+      [&]<std::size_t... I>(std::index_sequence<I...>) {
+        (field.metadata.emplace_back( //
+          &type_getter<typename Field::template metadata_type<I> >,
+          static_cast<void*>(new std::remove_const_t<typename Field::template metadata_type<I>>{Field::template metadata_item<I>})), ...);
+      }(std::make_index_sequence<Field::metadata_count>{});
+
+      return field;
+    }
+
+    template <typename Field>
+    void push_field() {
+      fields_.push_back(make_field_data<Field>());
+      const auto& field = fields_.back();
+
+      fields_by_name_[field.name] = &field;
+      fields_by_offset_[field.offset] = &field;
+    }
+
+    template <typename Method>
+    void push_method() {
+      methods_.push_back({
+        // .type        = []() -> type_info { return from<typename field<T, I>::type>(); },
+        .index = Method::index,
+        .name = Method::name,
+        .access_type = Method::access,
+      });
+      const auto& method = methods_.back();
+
+      methods_by_name_[method.name] = &method;
+    }
   public:
 
     template <typename T>
     static const type_info& from() {
-      static constexpr type_id_t tid = type_id<T>;
-      static constexpr type_id_t pid = pack_type_id<T>;
+      using type = std::remove_const_t<std::remove_reference_t<T>>;
+      static constexpr type_id_t tid = type_id<type>;
+      static constexpr type_id_t pid = pack_type_id<type>;
 
       if (type_registry.contains(tid)) {
         return type_registry[tid];
       }
 
-      if constexpr (Reflected<T>) {
-        static constexpr std::size_t f_count = field_count<T>;
-        static constexpr std::size_t m_count = method_count<T>;
-
-        type_info ti{};
+      type_registry.emplace(tid, type_info{});
+      type_info &ti = type_registry.at(tid);
+      if constexpr (Reflected<type>) {
+        static constexpr std::size_t f_count = field_count<type>;
+        static constexpr std::size_t m_count = method_count<type>;
 
         [&]<std::size_t... I>(std::index_sequence<I...>) {
-          (
-            [&]<typename Field>(Field) {
-              static std::size_t off = Field::offset;
-              ti.fields_.push_back({
-                .index       = Field::index,
-                .name        = Field::name,
-                .size        = Field::size,
-                .offset      = off,
-                .access_type = Field::access,
-                .type        = []() -> type_info { return from<typename Field::type>(); },
-              });
-            }(field<T, I>{}),
-            ...
-          );
+          (ti.push_field<field<type, I>>(), ...);
         }(std::make_index_sequence<f_count>{});
 
         [&]<std::size_t... I>(std::index_sequence<I...>) {
-          (ti.methods_.push_back({
-             // .type        = []() -> type_info { return from<typename field<T, I>::type>(); },
-             .index       = I,
-             .name        = method<T, I>::name,
-             .access_type = method<T, I>::access,
-           }),
-           ...);
+          (ti.push_method<method<type, I>>(), ...);
         }(std::make_index_sequence<m_count>{});
 
         ti.type_id_ = tid;
         ti.name_ = type_name<T>;
-
-        type_registry.emplace(tid, ti);
       } else {
-        type_info ti{};
         ti.type_id_ = tid;
         ti.name_ = type_name<T>;
-        type_registry.emplace(tid, ti);
       }
 
-      type_info& ti = type_registry[tid];
       if constexpr (std::is_const_v<T>) {
         ti.is_const_ = true;
       }
@@ -132,21 +218,34 @@ export namespace refl {
 
       if constexpr (pid != 0) {
         ti.pack_id_ = pid;
-        ti.pack_param_ids_ = get_pack_param_ids<T>::vector();
+        ti.pack_param_ids_ = get_pack_param_ids<type>::vector();
       }
 
-      if constexpr(std::is_copy_constructible_v<T>) {
+      if constexpr(std::is_copy_constructible_v<type>) {
         ti.copy_construct_function_ = [](const void* src) -> void* {
-          const T& src_ref = *static_cast<const T*>(src);
-          T* dest = new T(src_ref);
+          const type& src_ref = *static_cast<const type*>(src);
+          type* dest = new type(src_ref);
           return dest;
         };
       }
-      if constexpr(std::is_copy_assignable_v<T>) {
+      if constexpr(std::is_copy_assignable_v<type>) {
         ti.copy_assign_function_ = [](void* dest, const void* src) {
-          T& dest_ref = *static_cast<T*>(dest);
-          const T& src_ref = *static_cast<const T*>(src);
+          type& dest_ref = *static_cast<type*>(dest);
+          const type& src_ref = *static_cast<const type*>(src);
           dest_ref = src_ref;
+        };
+      }
+      if constexpr(Reflected<type>) {
+        ti.equality_function_ = [](const void* lhs, const void* rhs) {
+          const type& LHS = *static_cast<const type*>(lhs);
+          const type& RHS = *static_cast<const type*>(rhs);
+          return deep_eq(LHS, RHS);
+        };
+      } else if constexpr (std::equality_comparable<type> and not std::is_function_v<type>) {
+        ti.equality_function_ = [](const void* lhs, const void* rhs) {
+          const type& LHS = *static_cast<const type*>(lhs);
+          const type& RHS = *static_cast<const type*>(rhs);
+          return LHS == RHS;
         };
       }
 
@@ -159,6 +258,19 @@ export namespace refl {
 
     const auto& fields() const {
       return fields_;
+    }
+
+    std::optional<const field_info*> field_by_name(const std::string& name) const {
+      if (fields_by_name_.contains(name)) {
+        return fields_by_name_.at(name);
+      }
+      return std::nullopt;
+    }
+    std::optional<const field_info*> field_by_offset(const std::size_t& offset) const {
+      if (fields_by_offset_.contains(offset)) {
+        return fields_by_offset_.at(offset);
+      }
+      return std::nullopt;
     }
 
     std::size_t hash_code() const {
@@ -232,10 +344,20 @@ export namespace refl {
       }
     }
 
+    bool equality(const void* lhs, const void* rhs) const {
+      if (equality_function_.has_value()) {
+        return equality_function_.value()(lhs, rhs);
+      }
+      return false;
+    }
+
   private:
     std::string name_{};
-    std::vector<field_info> fields_{};
-    std::vector<method_info> methods_{};
+    std::list<field_info> fields_{};
+    std::unordered_map<std::string, const field_info*> fields_by_name_{};
+    std::unordered_map<std::size_t, const field_info*> fields_by_offset_{};
+    std::list<method_info> methods_{};
+    std::unordered_map<std::string, const method_info*> methods_by_name_{};
 
     bool is_const_ = false;
     bool is_lval_ref_ = false;
@@ -247,8 +369,12 @@ export namespace refl {
     type_id_t pack_id_{};
     std::vector<type_id_t> pack_param_ids_{};
 
+    [[refl::ignore]]
     std::optional<std::function<void*(const void*)>> copy_construct_function_{std::nullopt};
+    [[refl::ignore]]
     std::optional<std::function<void(void*,const void*)>> copy_assign_function_{std::nullopt};
+    [[refl::ignore]]
+    std::optional<std::function<bool(const void*,const void*)>> equality_function_{std::nullopt};
   };
 
 
@@ -265,4 +391,21 @@ export namespace refl {
     ids.push_back(I);
     return ids;
   }
+
+
+  type_id_t get_id_from_info_getter(const type_info& (*tif)()) {
+    return tif().id();
+  }
 }
+
+export template<>
+struct std::hash<refl::field_path> {
+  std::size_t operator()(const refl::field_path& path) const {
+    std::size_t seed = path.fields_.size();
+    for (const auto &v: path.fields_) {
+      seed ^= std::hash<std::size_t>{}(reinterpret_cast<std::size_t>(v)) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    }
+    return seed;
+  }
+};
+

@@ -41,6 +41,7 @@ export namespace refl {
     static constexpr std::size_t index = I;
     static constexpr const char* name  = static_type_info<T>::field_names[I];
     using type = typename packtl::get<I, typename static_type_info<T>::field_types>::type;
+    static constexpr type_id_t type_id = refl::type_id<type>;
     static constexpr std::size_t size =
       packtl::get<I, typename static_type_info<T>::field_sizes>::value;
     static constexpr std::size_t offset =

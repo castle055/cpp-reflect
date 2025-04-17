@@ -48,14 +48,15 @@ endif ()
 # Use `-DCMAKE_BUILD_TYPE=` to override this.
 set(CMAKE_BUILD_TYPE "Release" CACHE STRING "")
 
-cmake_minimum_required(VERSION 3.29.20240518 FATAL_ERROR)
+cmake_minimum_required(VERSION 4.0 FATAL_ERROR)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-project(cpp_reflect LANGUAGES CXX)
-
+set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD "a9e1cf81-9932-4810-974b-6eccaf14e457")
+set(CMAKE_CXX_MODULE_STD ON)
 set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_STANDARD_REQUIRED YES)
-set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -pthread")
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -pthread -fexperimental-library")
+
+project(cpp_reflect LANGUAGES CXX)
 
 SET(CPP_REFLECT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 SET(CPP_REFLECT_TEST_DIR ${CPP_REFLECT_DIR}/test)
@@ -81,18 +82,35 @@ FetchContent_MakeAvailable(packtl)
 #[[                         CONFIGURE CLANG PLUGINS                          ]]#
 add_subdirectory(clang)
 
-macro(reflect_target TARGET)
-  add_dependencies(${TARGET} ReflectorPlugin)
-  FILE(GLOB_RECURSE PLUGIN_FILE CONFIGURE_DEPENDS ${REFLECTOR_PLUGIN_BINARY})
-  if(EXISTS ${REFLECTOR_PLUGIN_BINARY})
-      set_target_properties(${TARGET} PROPERTIES COMPILE_FLAGS "-fplugin=${REFLECTOR_PLUGIN_BINARY}")
-  endif()
-endmacro(reflect_target)
+if(CPP_REFLECT_PLUGIN_BUILD)
+    return()
+endif()
+
+if(NOT EXISTS ${REFLECTOR_PLUGIN_BINARY})
+    execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}"
+            -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+            -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+            -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
+            -DCPP_REFLECT_PLUGIN_BUILD=ON
+            ${CMAKE_CURRENT_SOURCE_DIR}
+            WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+    execute_process(COMMAND ${CMAKE_COMMAND} --build . --target ReflectorPlugin
+            WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+endif()
+
+macro(compile_target_with_reflection TARGET)
+    set_target_properties(${TARGET} PROPERTIES COMPILE_FLAGS "-fplugin=${REFLECTOR_PLUGIN_BINARY}")
+endmacro(compile_target_with_reflection)
 
 ################################################################################
 #[[                          CONFIGURE CPP REFLECT                           ]]#
 add_library(cpp_reflect)
-reflect_target(cpp_reflect)
+compile_target_with_reflection(cpp_reflect)
+
+macro(reflect_target TARGET)
+    compile_target_with_reflection(${TARGET})
+    target_link_libraries(${TARGET} PUBLIC cpp_reflect)
+endmacro(reflect_target)
 
 FILE(GLOB_RECURSE SRC_LIST CONFIGURE_DEPENDS
         ${CPP_REFLECT_INCLUDE_DIR}/*.h
@@ -112,7 +130,7 @@ FILE(GLOB_RECURSE SRC_MODI_LIST CONFIGURE_DEPENDS
         ${CPP_REFLECT_SOURCE_DIR}/*.cppi
 )
 
-target_include_directories(cpp_reflect PUBLIC ${CPP_REFLECT_INCLUDE_DIR})
+target_include_directories(cpp_reflect PUBLIC ${CPP_REFLECT_SOURCE_DIR})
 target_include_directories(cpp_reflect PUBLIC ${cyd_fabric_SOURCE_DIR}/include)
 target_compile_features(cpp_reflect PUBLIC cxx_std_23)
 

@@ -22,6 +22,17 @@ namespace refl {
       return data_[path];
     }
 
+    any &at(const std::string &path) {
+      return data_.at(path);
+    }
+
+    const any &at(const std::string &path) const {
+      return data_.at(path);
+    }
+
+    bool contains(const std::string &path) const {
+      return data_.contains(path);
+    }
   private:
     std::map<std::string, any> data_ { };
   };
