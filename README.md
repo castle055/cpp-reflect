@@ -51,10 +51,6 @@ include_directories(${cpp_reflect_SOURCE_DIR}/include)
 
 {TODO}
 
-# License
-
-GPL 3.0 &nbsp;&middot;&nbsp; [LICENSE.MD](https://castle055.github.io/cpp-reflect/license-1.html)
-
 ---
 
 > GitHub [@castle055](https://github.com/castle055) &nbsp;&middot;&nbsp;
