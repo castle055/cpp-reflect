@@ -84,13 +84,19 @@ namespace refl {
     }
 
     any &operator=(const any &other) {
-      if (data_ != nullptr) {
-        destructor_(data_);
-        data_ = nullptr;
+      if (type_info_ != other.type_info_) {
+        type_info_ = other.type_info_;
+        if (data_ != nullptr) {
+          destructor_(data_);
+          data_ = nullptr;
+        }
       }
-      type_info_ = other.type_info_;
       if (type_info_ != nullptr) {
-        type_info_->assign_copy_of(other.data_, data_);
+        if (data_ != nullptr) {
+          type_info_->assign_copy_of(other.data_, data_);
+        } else {
+          data_ = type_info_->make_copy_of(other.data_);
+        }
       }
       destructor_ = other.destructor_;
       return *this;
