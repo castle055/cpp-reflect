@@ -17,6 +17,8 @@
   <a href="#license">License</a>
 </p>
 
+[TOC]
+
 # Overview
 
 {TODO}
@@ -36,22 +38,18 @@ Since this is a module library, the recommended way to integrate it into your pr
 
 include(FetchContent)
 
-FetchContent_Declare(cyd_ui
-    GIT_REPOSITORY https://github.com/castle055/cyd-ui.git
-    GIT_TAG main # for the latest version, or a version tag such as 'v0.14.0'
+FetchContent_Declare(cpp_reflect
+    GIT_REPOSITORY https://github.com/castle055/cpp-reflect.git
+    GIT_TAG main # for the latest version, or a version tag such as 'v0.2.0'
     FIND_PACKAGE_ARGS
 )
-FetchContent_MakeAvailable(cyd_ui)
-include_directories(${cyd_ui_SOURCE_DIR}/include)
+FetchContent_MakeAvailable(cpp_reflect)
+include_directories(${cpp_reflect_SOURCE_DIR}/include)
 ```
 
 # Usage
 
 {TODO}
-
-# License
-
-GPL 3.0 &nbsp;&middot;&nbsp; [LICENSE.MD](LICENSE.md)
 
 ---
 

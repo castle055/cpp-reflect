@@ -89,7 +89,7 @@ endif()
 if(NOT EXISTS ${REFLECTOR_PLUGIN_BINARY})
     execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}"
             -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-            -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+            -DCMAKE_BUILD_TYPE=Release #${CMAKE_BUILD_TYPE}
             -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
             -DCPP_REFLECT_PLUGIN_BUILD=ON
             ${CMAKE_CURRENT_SOURCE_DIR}
@@ -170,7 +170,7 @@ endif ()
 ################################################################################
 if (CPP_REFLECT_DEV_MODE AND CPP_REFLECT_BUILD_DOCS)
     target_configure_doxygen(cpp_reflect
-            DOXYFILE ${CPP_REFLECT_DIR}/Doxyfile
+            DOXYFILE ${CPP_REFLECT_DIR}/docs/Doxyfile
             BASE_DIR ${CPP_REFLECT_DIR}
     )
 endif ()

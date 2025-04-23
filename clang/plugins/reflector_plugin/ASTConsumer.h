@@ -53,19 +53,27 @@ public:
     }
   }
 
+  std::optional<std::reference_wrapper<IdentifierInfo>> pack_id {std::nullopt};
+  std::optional<std::reference_wrapper<IdentifierInfo>> int_pack_id {std::nullopt};
+  std::optional<TemplateName> PackTemplate {std::nullopt};
+  std::optional<TemplateName> IntPackTemplate {std::nullopt};
+
   void add_types_decl(
-    CXXRecordDecl* record, const std::list<QualType>& field_types, const std::string& identifier
+    CXXRecordDecl* record, const std::deque<QualType>& field_types, const std::string& identifier
   ) {
     // Create the using field_types = pack<int, long, double> statement
     IdentifierInfo& FieldTypesID = Context->Idents.get(identifier);
-    IdentifierInfo& PackID       = Context->Idents.get("refl_pack");
+
+    if (not pack_id.has_value()) {
+      IdentifierInfo& PackID = Context->Idents.get("refl_pack");
+
+      PackTemplate.emplace(dyn_cast<
+        TemplateDecl>(Compiler->getSema().getAsTemplateNameDecl(Compiler->getSema().LookupSingleName(
+        Compiler->getSema().getCurScope(), {&PackID}, record->getBeginLoc(), Sema::LookupOrdinaryName
+      ))));
+    }
 
     // Create Template Specialization for 'pack<int, long, double>'
-    TemplateName PackTemplate{dyn_cast<
-      TemplateDecl>(Compiler->getSema().getAsTemplateNameDecl(Compiler->getSema().LookupSingleName(
-      Compiler->getSema().getCurScope(), {&PackID}, record->getBeginLoc(), Sema::LookupOrdinaryName
-    )))};
-
     TemplateArgumentListInfo TemplateArgs{record->getBeginLoc(), record->getEndLoc()};
     for (const auto& type: field_types) {
       auto arg =
@@ -74,7 +82,7 @@ public:
     }
 
     QualType PackSpecialization =
-      Compiler->getSema().CheckTemplateIdType(PackTemplate, record->getBeginLoc(), TemplateArgs);
+      Compiler->getSema().CheckTemplateIdType(PackTemplate.value(), record->getBeginLoc(), TemplateArgs);
 
     // Create TypeAliasDecl for 'using field_types = refl_pack<...>'
     TypeAliasDecl* FieldTypesAlias = TypeAliasDecl::Create(
@@ -103,13 +111,12 @@ public:
     return PackTemplate;
   }
 
-  QualType specialize_template(const std::string& template_name, TemplateArgumentListInfo& args) {
-    TemplateName template_ = find_template(template_name);
+  QualType specialize_template(const TemplateName& template_, TemplateArgumentListInfo& args) {
     return Compiler->getSema().CheckTemplateIdType(template_, SourceLocation{}, args);
   }
 
   void add_integer_list(
-    CXXRecordDecl* record, const std::list<uint64_t>& items, const std::string& identifier
+    CXXRecordDecl* record, const std::deque<uint64_t>& items, const std::string& identifier
   ) {
     // Create Template Specialization for 'pack<int, long, double>'
     TemplateArgumentListInfo TemplateArgs{record->getBeginLoc(), record->getEndLoc()};
@@ -122,7 +129,16 @@ public:
       ));
     }
 
-    QualType PackSpecialization = specialize_template("refl_int_pack", TemplateArgs);
+    if (not int_pack_id.has_value()) {
+      IdentifierInfo& PackID = Context->Idents.get("refl_int_pack");
+
+      IntPackTemplate.emplace(dyn_cast<
+        TemplateDecl>(Compiler->getSema().getAsTemplateNameDecl(Compiler->getSema().LookupSingleName(
+        Compiler->getSema().getCurScope(), {&PackID}, record->getBeginLoc(), Sema::LookupOrdinaryName
+      ))));
+    }
+
+    QualType PackSpecialization = specialize_template(IntPackTemplate.value(), TemplateArgs);
 
     // Create TypeAliasDecl for 'using field_types = pack<int, long, double>'
     IdentifierInfo& FieldTypesID    = Context->Idents.get(identifier);
@@ -142,7 +158,7 @@ public:
   }
 
   void add_names_decl(
-    CXXRecordDecl* record, const std::list<std::string>& names, const std::string& identifier
+    CXXRecordDecl* record, const std::deque<std::string>& names, const std::string& identifier
   ) {
     IdentifierInfo& FieldNamesID          = Context->Idents.get(identifier);
     QualType        ConstCharPtrArrayType = Context->getConstantArrayType(
@@ -195,7 +211,7 @@ public:
 
   void add_metadata_decl(
     CXXRecordDecl*                     record,
-    const std::list<std::list<Expr*>>& metadata_exprs,
+    const std::deque<std::list<Expr*>>& metadata_exprs,
     const std::string&                 identifier
   ) {
     IdentifierInfo& MetadataID = Context->Idents.get(identifier);
@@ -271,20 +287,20 @@ public:
   }
 
   void add_type_info(CXXRecordDecl* record) {
-    std::list<std::string> field_names{};
-    std::list<uint64_t>    field_sizes{};
-    std::list<uint64_t>    field_offsets{};
-    std::list<uint64_t>    field_accesses{};
-    std::list<QualType>    field_types{};
+    std::deque<std::string> field_names{};
+    std::deque<uint64_t>    field_sizes{};
+    std::deque<uint64_t>    field_offsets{};
+    std::deque<uint64_t>    field_accesses{};
+    std::deque<QualType>    field_types{};
 
-    std::list<std::string> method_names{};
-    std::list<uint64_t>    method_accesses{};
-    std::list<QualType>    method_types{};
+    std::deque<std::string> method_names{};
+    std::deque<uint64_t>    method_accesses{};
+    std::deque<QualType>    method_types{};
 
     uint64_t                    last_metadata_offset = 0;
-    std::list<uint64_t>         field_metadata_offsets{};
-    std::list<uint64_t>         field_metadata_counts{};
-    std::list<std::list<Expr*>> field_metadata_exprs{};
+    std::deque<uint64_t>         field_metadata_offsets{};
+    std::deque<uint64_t>         field_metadata_counts{};
+    std::deque<std::list<Expr*>> field_metadata_exprs{};
 
     for (const auto& field: record->fields()) {
       if (field->isTemplated() || field->isTemplateDecl())
@@ -411,7 +427,7 @@ public:
 
     type_info_record->setAccess(AccessSpecifier::AS_public);
     type_info_record->completeDefinition();
-    Compiler->getSema().CheckCompletedCXXClass(Compiler->getSema().getCurScope(), type_info_record);
+    // Compiler->getSema().CheckCompletedCXXClass(Compiler->getSema().getCurScope(), type_info_record);
     record->addDecl(type_info_record);
   }
 
