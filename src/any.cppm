@@ -90,7 +90,7 @@ namespace refl {
       }
       type_info_ = other.type_info_;
       if (type_info_ != nullptr) {
-        data_ = type_info_->make_copy_of(other.data_);
+        type_info_->assign_copy_of(other.data_, data_);
       }
       destructor_ = other.destructor_;
       return *this;
