@@ -427,7 +427,7 @@ public:
 
     type_info_record->setAccess(AccessSpecifier::AS_public);
     type_info_record->completeDefinition();
-    Compiler->getSema().CheckCompletedCXXClass(Compiler->getSema().getCurScope(), type_info_record);
+    // Compiler->getSema().CheckCompletedCXXClass(Compiler->getSema().getCurScope(), type_info_record);
     record->addDecl(type_info_record);
   }
 
