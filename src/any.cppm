@@ -183,15 +183,13 @@ namespace refl {
     }
 
     any_ref(const refl::type_info &t_info, void* ptr) {
-      any_ref a { };
-      a.data_      = ptr;
-      a.type_info_ = &t_info;
+      data_      = ptr;
+      type_info_ = &t_info;
     }
 
     any_ref(refl::any &owner_any) {
-      any_ref a { };
-      a.data_      = owner_any.data();
-      a.type_info_ = &owner_any.type();
+      data_      = owner_any.data();
+      type_info_ = &owner_any.type();
     }
 
 
