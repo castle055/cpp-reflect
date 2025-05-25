@@ -67,42 +67,6 @@ namespace refl {
     }
   };
 
-  export struct field_path {
-    friend std::hash<refl::field_path>;
-
-    field_path(const field_info* field): fields_ {field} {
-    }
-
-    field_path(std::initializer_list<const field_info*> fields): fields_(fields) {
-    }
-
-    const type_info &type() const {
-      return fields_.back()->type();
-    }
-
-    void* get_ptr(void* obj) const {
-      void* ptr = obj;
-
-      for (const field_info* field: fields_) {
-        ptr = field->get_ptr(ptr);
-      }
-
-      return ptr;
-    }
-
-    template<typename T>
-    T &get_ref(void* obj) const {
-      return *static_cast<T*>(get_ptr(obj));
-    }
-
-    bool operator==(const field_path &other) const {
-      return fields_ == other.fields_;
-    }
-
-  private:
-    std::vector<const field_info*> fields_;
-  };
-
   export struct method_info {
     std::size_t index;
     std::string name;
@@ -186,36 +150,16 @@ namespace refl {
     template<typename T>
     static inline const type_info &from() {
       using type                     = std::remove_const_t<std::remove_reference_t<T>>;
-      static constexpr type_id_t tid = type_id<type>;
-      static constexpr type_id_t pid = pack_type_id<type>;
+      static constexpr type_id_t tid = type_id<T>;
+      static constexpr type_id_t pid = pack_type_id<T>;
 
       if (type_registry.contains(tid)) {
         return type_registry.at(tid);
       }
 
       type_info &ti = type_registry[tid];
-      if constexpr (Reflected<type>) {
-        static constexpr std::size_t f_count = field_count<type>;
-        static constexpr std::size_t m_count = method_count<type>;
-
-        [&]<std::size_t... I>(std::index_sequence<I...>) {
-          (ti.push_field<field<type, I>>(), ...);
-        }(std::make_index_sequence<f_count> { });
-
-        [&]<std::size_t... I>(std::index_sequence<I...>) {
-          (ti.push_method<method<type, I>>(), ...);
-        }(std::make_index_sequence<m_count> { });
-
-        ti.type_id_ = tid;
-        ti.name_    = type_name<T>;
-      } else {
-        ti.type_id_ = tid;
-        ti.name_    = type_name<T>;
-      }
-
-      if constexpr (std::is_const_v<T>) {
-        ti.is_const_ = true;
-      }
+      ti.type_id_   = tid;
+      ti.name_      = type_name<T>;
 
       if constexpr (std::is_lvalue_reference_v<T>) {
         ti.is_lval_ref_      = true;
@@ -226,44 +170,91 @@ namespace refl {
       } else if constexpr (std::is_pointer_v<T>) {
         ti.is_ptr_           = true;
         ti.indirect_type_id_ = from<std::remove_pointer_t<T>>().id();
+      } else {
+        ti.indirect_type_id_ = std::nullopt;
       }
 
-      if constexpr (pid != 0) {
-        ti.pack_id_        = pid;
-        ti.pack_param_ids_ = get_pack_param_ids<type>::vector();
+      if constexpr (std::is_const_v<T>) {
+        ti.is_const_ = true;
       }
 
-      if constexpr (std::is_copy_constructible_v<type>) {
+      if constexpr (std::is_lvalue_reference_v<T> or std::is_rvalue_reference_v<T> or std::is_pointer_v<T>) {
         ti.copy_construct_function_ = [](const void* src) -> void* {
-          const type &src_ref = *static_cast<const type*>(src);
-          type* dest          = new type(src_ref);
+          const T &src_ref = *static_cast<const T*>(src);
+          T* dest          = new T(src_ref);
           return dest;
         };
-      }
 
-      if constexpr (std::is_copy_assignable_v<type>) {
-        ti.copy_assign_function_ = [](void* dest, const void* src) {
-          type &dest_ref      = *static_cast<type*>(dest);
-          const type &src_ref = *static_cast<const type*>(src);
-          dest_ref            = src_ref;
-        };
-      }
+        if (ti.is_ptr()) {
+          ti.copy_assign_function_ = [](void* dest, const void* src) {
+            type &dest_ref      = *static_cast<type*>(dest);
+            const type &src_ref = *static_cast<const type*>(src);
+            dest_ref            = src_ref;
+          };
+        }
 
-      if constexpr (Reflected<type>) {
         ti.equality_function_ = [](const void* lhs, const void* rhs) {
-          const type &LHS = *static_cast<const type*>(lhs);
-          const type &RHS = *static_cast<const type*>(rhs);
-          return deep_eq(LHS, RHS);
-        };
-      } else if constexpr (std::equality_comparable<type> and not std::is_function_v<type>) {
-        ti.equality_function_ = [](const void* lhs, const void* rhs) {
-          const type &LHS = *static_cast<const type*>(lhs);
-          const type &RHS = *static_cast<const type*>(rhs);
+          const T &LHS = *static_cast<const T*>(lhs);
+          const T &RHS = *static_cast<const T*>(rhs);
           return LHS == RHS;
         };
+      } else {
+        if constexpr (Reflected<type>) {
+          static constexpr std::size_t f_count = field_count<type>;
+          static constexpr std::size_t m_count = method_count<type>;
+
+          [&]<std::size_t... I>(std::index_sequence<I...>) {
+            (ti.push_field<field<type, I>>(), ...);
+          }(std::make_index_sequence<f_count> { });
+
+          [&]<std::size_t... I>(std::index_sequence<I...>) {
+            (ti.push_method<method<type, I>>(), ...);
+          }(std::make_index_sequence<m_count> { });
+        }
+
+        if constexpr (pid != 0) {
+          ti.pack_id_        = pid;
+          ti.pack_param_ids_ = get_pack_param_ids<type>::vector();
+        }
+
+        if constexpr (std::is_copy_constructible_v<T>) {
+          ti.copy_construct_function_ = [](const void* src) -> void* {
+            const T &src_ref = *static_cast<const T*>(src);
+            T* dest          = new T(src_ref);
+            return dest;
+          };
+        }
+
+        if constexpr (std::is_copy_assignable_v<type>) {
+          if (not ti.is_const_) {
+            ti.copy_assign_function_ = [](void* dest, const void* src) {
+              type &dest_ref      = *static_cast<type*>(dest);
+              const type &src_ref = *static_cast<const type*>(src);
+              dest_ref            = src_ref;
+            };
+          }
+        }
+
+        if constexpr (Reflected<type>) {
+          ti.equality_function_ = [](const void* lhs, const void* rhs) {
+            const type &LHS = *static_cast<const type*>(lhs);
+            const type &RHS = *static_cast<const type*>(rhs);
+            return deep_eq(LHS, RHS);
+          };
+        } else if constexpr (std::equality_comparable<type> and not std::is_function_v<type>) {
+          ti.equality_function_ = [](const void* lhs, const void* rhs) {
+            const type &LHS = *static_cast<const type*>(lhs);
+            const type &RHS = *static_cast<const type*>(rhs);
+            return LHS == RHS;
+          };
+        }
       }
 
       return ti;
+    }
+
+    bool operator==(const type_info &other) const {
+      return type_id_ == other.type_id_;
     }
 
     const std::string &name() const {
@@ -419,6 +410,76 @@ namespace refl {
   type_id_t get_id_from_info_getter(const type_info & (* tif)()) {
     return tif().id();
   }
+
+
+  export class field_path {
+    std::vector<const field_info*> fields_;
+
+  public:
+    friend std::hash<refl::field_path>;
+
+    field_path(const field_info* field): fields_ {field} {
+    }
+
+    field_path(std::initializer_list<const field_info*> fields): fields_(fields) {
+    }
+
+    bool operator==(const field_path &other) const {
+      return fields_ == other.fields_;
+    }
+
+    const type_info &type() const {
+      return fields_.back()->type();
+    }
+
+    void* get_ptr(void* obj) const {
+      void* ptr = obj;
+
+      for (const field_info* field: fields_) {
+        ptr = field->get_ptr(ptr);
+      }
+
+      return ptr;
+    }
+
+    template<typename T>
+    T &get_ref(void* obj) const {
+      return *static_cast<T*>(get_ptr(obj));
+    }
+
+    field_path append(const field_info* field) const {
+      field_path fp { };
+      fp.fields_ = fields_;
+      fp.fields_.emplace_back(field);
+      return fp;
+    }
+
+    field_path append(const field_path &other) const {
+      field_path fp { };
+      fp.fields_ = fields_;
+      for (const auto &fi: other.fields_) {
+        fp.fields_.emplace_back(fi);
+      }
+      return fp;
+    }
+
+    field_path parent() const {
+      field_path fp { };
+      fp.fields_.resize(fields_.size() - 1);
+      for (int i = 0; i < fields_.size() - 1; ++i) {
+        fp.fields_[i] = fields_[i];
+      }
+      return fp;
+    }
+
+    std::size_t depth() const {
+      return fields_.size();
+    }
+
+    const type_info &root_type() const {
+      return fields_.front()->type();
+    }
+  };
 }
 
 export template<>
