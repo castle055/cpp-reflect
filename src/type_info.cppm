@@ -144,7 +144,7 @@ namespace refl {
         .type_id = Field::type_id,
         .type = &type_getter<typename Field::type>,
       };
-      field.metadata.reserve(Field::metadata_count);
+      field.metadata.resize(Field::metadata_count);
 
       [&]<std::size_t... I>(std::index_sequence<I...>) {
         ((field.metadata.at(I) = {
