@@ -479,6 +479,14 @@ namespace refl {
     const type_info &root_type() const {
       return fields_.front()->type();
     }
+
+    bool operator<(const field_path &other) const {
+      if (other.root_type() != root_type()) {
+        throw std::logic_error(std::format("Comparing paths of unrelated root types ('{}','{}')", root_type().name(),
+                                           other.root_type().name()));
+      }
+      return depth() < other.depth();
+    }
   };
 }
 
