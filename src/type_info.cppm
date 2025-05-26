@@ -40,9 +40,18 @@ namespace refl {
       return static_cast<char*>(obj) + offset;
     }
 
+    const void* get_ptr(const void* obj) const {
+      return static_cast<const char*>(obj) + offset;
+    }
+
     template<typename T>
     T &get_ref(void* obj) const {
       return *static_cast<T*>(get_ptr(obj));
+    }
+
+    template<typename T>
+    const T &get_ref(const void* obj) const {
+      return *static_cast<const T*>(get_ptr(obj));
     }
 
     template<typename MetadataType>
@@ -456,9 +465,24 @@ namespace refl {
       return ptr;
     }
 
+    const void* get_ptr(const void* obj) const {
+      const void* ptr = obj;
+
+      for (const field_info* field: fields_) {
+        ptr = field->get_ptr(ptr);
+      }
+
+      return ptr;
+    }
+
     template<typename T>
     T &get_ref(void* obj) const {
       return *static_cast<T*>(get_ptr(obj));
+    }
+
+    template<typename T>
+    const T &get_ref(const void* obj) const {
+      return *static_cast<const T*>(get_ptr(obj));
     }
 
     field_path append(const field_info* field) const {
