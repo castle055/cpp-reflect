@@ -415,7 +415,7 @@ namespace refl {
 
 namespace refl {
   export class field_path {
-    const type_info &root_type_ { };
+    const type_info* root_type_;
     std::vector<const field_info*> fields_;
 
   public:
@@ -425,16 +425,16 @@ namespace refl {
     field_path() = delete;
 
     explicit field_path(const type_info &root_type)
-      : root_type_(root_type) {
+      : root_type_(&root_type) {
     }
 
     field_path(const type_info &root_type, const field_info* field)
-      : root_type_(root_type),
+      : root_type_(&root_type),
         fields_ {field} {
     }
 
     field_path(const type_info &root_type, std::initializer_list<const field_info*> fields)
-      : root_type_(root_type),
+      : root_type_(&root_type),
         fields_(fields) {
     }
 
@@ -462,14 +462,14 @@ namespace refl {
     }
 
     field_path append(const field_info* field) const {
-      field_path fp {root_type_};
+      field_path fp {*root_type_};
       fp.fields_ = fields_;
       fp.fields_.emplace_back(field);
       return fp;
     }
 
     field_path append(const field_path &other) const {
-      field_path fp {root_type_};
+      field_path fp {*root_type_};
       fp.fields_ = fields_;
       for (const auto &fi: other.fields_) {
         fp.fields_.emplace_back(fi);
@@ -478,7 +478,7 @@ namespace refl {
     }
 
     field_path parent() const {
-      field_path fp {root_type_};
+      field_path fp {*root_type_};
       fp.fields_.resize(fields_.size() - 1);
       for (int i = 0; i < fields_.size() - 1; ++i) {
         fp.fields_[i] = fields_[i];
@@ -506,7 +506,8 @@ namespace refl {
       }
 
       if (not valid) {
-        throw std::logic_error(std::format("Paths from different branches ({} and {})", this->to_string(), other.to_string()));
+        throw std::logic_error(std::format("Paths from different branches ({} and {})", this->to_string(),
+                                           other.to_string()));
       }
 
       field_path fp {other.type()};
@@ -526,7 +527,7 @@ namespace refl {
     }
 
     const type_info &root_type() const {
-      return root_type_;
+      return *root_type_;
     }
 
     bool operator<(const field_path &other) const {
