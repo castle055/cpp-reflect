@@ -15,6 +15,7 @@ export import :type_name;
 export import :accessors;
 export import :equality;
 
+
 namespace refl {
   export class type_info;
   std::map<type_id_t, type_info> type_registry { };
@@ -487,6 +488,16 @@ namespace refl {
       }
       return depth() < other.depth();
     }
+
+    std::string to_string() const {
+      std::string ss;
+      ss = std::format("({}){}::", depth(), root_type().name());
+      for (int i = 0; i < fields_.size() - 1; ++i) {
+        ss = std::format("{}{}.", ss, fields_[i]->type().name());
+      }
+      ss = std::format("{}{}", ss, fields_[fields_.size() - 1]->type().name());
+      return ss;
+    }
   };
 }
 
@@ -498,5 +509,17 @@ struct std::hash<refl::field_path> {
       seed ^= std::hash<std::size_t> { }(reinterpret_cast<std::size_t>(v)) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
     }
     return seed;
+  }
+};
+
+template<>
+struct std::formatter<refl::field_path> {
+  constexpr auto parse(std::format_parse_context &ctx) {
+    return ctx.begin();
+  }
+
+  template<typename FormatContext>
+  auto format(const refl::field_path &p, FormatContext &ctx) {
+    return std::format_to(ctx.out(), "{}", p.to_string());
   }
 };
