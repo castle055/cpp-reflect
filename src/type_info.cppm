@@ -229,8 +229,8 @@ namespace refl {
 
         if constexpr (std::is_copy_constructible_v<T>) {
           ti.copy_construct_function_ = [](const void* src) -> void* {
-            const T &src_ref = *static_cast<const T*>(src);
-            T* dest          = new T(src_ref);
+            const type &src_ref = *static_cast<const type*>(src);
+            type* dest          = new type(src_ref);
             return dest;
           };
         }
