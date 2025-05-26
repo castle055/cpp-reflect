@@ -411,18 +411,31 @@ namespace refl {
   type_id_t get_id_from_info_getter(const type_info & (* tif)()) {
     return tif().id();
   }
+}
 
-
+namespace refl {
   export class field_path {
+    const type_info &root_type_ { };
     std::vector<const field_info*> fields_;
 
   public:
     friend std::hash<refl::field_path>;
+    friend std::formatter<refl::field_path>;
 
-    field_path(const field_info* field): fields_ {field} {
+    field_path() = delete;
+
+    explicit field_path(const type_info &root_type)
+      : root_type_(root_type) {
     }
 
-    field_path(std::initializer_list<const field_info*> fields): fields_(fields) {
+    field_path(const type_info &root_type, const field_info* field)
+      : root_type_(root_type),
+        fields_ {field} {
+    }
+
+    field_path(const type_info &root_type, std::initializer_list<const field_info*> fields)
+      : root_type_(root_type),
+        fields_(fields) {
     }
 
     bool operator==(const field_path &other) const {
@@ -449,14 +462,14 @@ namespace refl {
     }
 
     field_path append(const field_info* field) const {
-      field_path fp { };
+      field_path fp {root_type_};
       fp.fields_ = fields_;
       fp.fields_.emplace_back(field);
       return fp;
     }
 
     field_path append(const field_path &other) const {
-      field_path fp { };
+      field_path fp {root_type_};
       fp.fields_ = fields_;
       for (const auto &fi: other.fields_) {
         fp.fields_.emplace_back(fi);
@@ -465,10 +478,45 @@ namespace refl {
     }
 
     field_path parent() const {
-      field_path fp { };
+      field_path fp {root_type_};
       fp.fields_.resize(fields_.size() - 1);
       for (int i = 0; i < fields_.size() - 1; ++i) {
         fp.fields_[i] = fields_[i];
+      }
+      return fp;
+    }
+
+    field_path relative_to(const field_path &other) const {
+      if (other.root_type() != root_type()) {
+        throw std::logic_error(std::format("Paths of unrelated root types ('{}','{}')", root_type().name(),
+                                           other.root_type().name()));
+      }
+
+      if (depth() <= other.depth()) {
+        throw std::logic_error(std::format("Path with depth {} cannot be relative to path of depth {}", depth(),
+                                           other.depth()));
+      }
+
+      bool valid = true;
+      for (std::size_t i = 0; i < other.depth(); ++i) {
+        if (fields_[i] != other.fields_[i]) {
+          valid = false;
+          break;
+        }
+      }
+
+      if (not valid) {
+        throw std::logic_error(std::format("Paths from different branches ({} and {})", this->to_string(), other.to_string()));
+      }
+
+      field_path fp {other.type()};
+      fp.fields_.resize(depth() - other.depth());
+      for (std::size_t i = other.depth() + 1, j = 0; i < depth(); ++i, ++j) {
+        fp.fields_[j] = fields_[i];
+        if (fields_[i] != other.fields_[i]) {
+          valid = false;
+          break;
+        }
       }
       return fp;
     }
@@ -478,7 +526,7 @@ namespace refl {
     }
 
     const type_info &root_type() const {
-      return fields_.front()->type();
+      return root_type_;
     }
 
     bool operator<(const field_path &other) const {
