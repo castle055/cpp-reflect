@@ -33,6 +33,20 @@ namespace refl {
     bool contains(const std::string &path) const {
       return data_.contains(path);
     }
+
+    auto begin() {
+      return data_.begin();
+    }
+    auto end() {
+      return data_.end();
+    }
+
+    auto begin() const {
+      return data_.begin();
+    }
+    auto end() const {
+      return data_.end();
+    }
   private:
     std::map<std::string, any> data_ { };
   };
