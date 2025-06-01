@@ -566,10 +566,34 @@ namespace refl {
       std::string ss;
       ss = std::format("({}){}::", depth(), root_type().name());
       for (int i = 0; i < fields_.size() - 1; ++i) {
-        ss = std::format("{}{}.", ss, fields_[i]->type().name());
+        ss = std::format("{}{}.", ss, fields_[i]->name);
       }
-      ss = std::format("{}{}", ss, fields_[fields_.size() - 1]->type().name());
+      ss = std::format("{}{}", ss, fields_[fields_.size() - 1]->name);
       return ss;
+    }
+
+    static std::optional<field_path> from_string(const type_info &t_info, const std::string &str) {
+      std::size_t dot_pos_prev       = 0;
+      std::size_t dot_pos            = str.find('.');
+      const type_info* current_tinfo = &t_info;
+      std::string current_name       = str.substr(dot_pos_prev, dot_pos);
+      field_path path {t_info};
+
+      do {
+        auto fi_opt = current_tinfo->field_by_name(current_name);
+        if (not fi_opt.has_value()) {
+          return std::nullopt;
+        }
+
+        path = path.append(fi_opt.value());
+
+        dot_pos_prev  = dot_pos;
+        dot_pos       = str.find('.', dot_pos_prev + 1);
+        current_name  = str.substr(dot_pos_prev + 1, dot_pos);
+        current_tinfo = &path.type();
+      } while (dot_pos_prev != std::string::npos);
+
+      return path;
     }
   };
 }
