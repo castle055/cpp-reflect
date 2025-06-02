@@ -601,11 +601,7 @@ namespace refl {
 export template<>
 struct std::hash<refl::field_path> {
   std::size_t operator()(const refl::field_path &path) const {
-    std::size_t seed = path.fields_.size();
-    for (const auto &v: path.fields_) {
-      seed ^= std::hash<std::size_t> { }(reinterpret_cast<std::size_t>(v)) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-    }
-    return seed;
+    return std::hash<std::string>{}(path.to_string());
   }
 };
 
