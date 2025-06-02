@@ -559,6 +559,9 @@ namespace refl {
         throw std::logic_error(std::format("Comparing paths of unrelated root types ('{}','{}')", root_type().name(),
                                            other.root_type().name()));
       }
+      if (depth() == other.depth()) {
+        return *this != other;
+      }
       return depth() < other.depth();
     }
 
