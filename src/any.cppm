@@ -63,7 +63,7 @@ namespace refl {
       return any {ptr};
     }
 
-    static any make(const refl::type_info &t_info, void* ptr) {
+    static any make(const refl::type_info &t_info, const void* ptr) {
       any a { };
       a.data_      = t_info.make_copy_of(ptr);
       a.type_info_ = &t_info;
