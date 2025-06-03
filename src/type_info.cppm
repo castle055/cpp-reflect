@@ -565,6 +565,22 @@ namespace refl {
       return depth() < other.depth();
     }
 
+    auto front() const {
+      return fields_.front();
+    }
+
+    auto back() const {
+      return fields_.back();
+    }
+
+    auto begin() const {
+      return fields_.begin();
+    }
+
+    auto end() const {
+      return fields_.end();
+    }
+
     std::string to_string() const {
       std::string ss;
       ss = std::format("({}){}::", depth(), root_type().name());
