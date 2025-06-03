@@ -56,7 +56,7 @@ namespace refl {
 
     template<typename MetadataType>
     bool has_metadata() const {
-      static constexpr type_id_t t_id = refl::type_id<MetadataType>;
+      static constexpr type_id_t t_id = refl::type_id<const MetadataType>;
       for (const auto &[tif, ptr]: metadata) {
         if (t_id == get_id_from_info_getter(tif)) {
           return true;
@@ -67,7 +67,7 @@ namespace refl {
 
     template<typename MetadataType>
     const MetadataType &get_metadata() const {
-      static constexpr type_id_t t_id = refl::type_id<MetadataType>;
+      static constexpr type_id_t t_id = refl::type_id<const MetadataType>;
       for (const auto &[tif, ptr]: metadata) {
         if (t_id == get_id_from_info_getter(tif)) {
           return *static_cast<const MetadataType*>(ptr);
