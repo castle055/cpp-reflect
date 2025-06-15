@@ -423,6 +423,41 @@ namespace refl {
 }
 
 namespace refl {
+  export template<typename T>
+  constexpr std::size_t offset_of(auto T::* member) {
+    return reinterpret_cast<std::size_t>(
+      &(reinterpret_cast<T const volatile*>(0)->*member)
+    );
+  }
+
+  template<typename...>
+  struct is_valid_path_t: std::false_type {
+  };
+
+  template<typename Prev, typename T, typename FT>
+    requires (not std::same_as<Prev, T>)
+  struct is_valid_path_t<Prev, FT T::*>: std::false_type {
+    static_assert(std::same_as<Prev, T>, "Invalid path");
+  };
+
+  template<typename Prev, typename T, typename FT>
+    requires std::same_as<Prev, T>
+  struct is_valid_path_t<Prev, FT T::*>: std::true_type {
+  };
+
+  template<typename Prev, typename T, typename FT, typename... Rest>
+    requires (not std::same_as<Prev, T>)
+  struct is_valid_path_t<Prev, FT T::*, Rest...>: std::false_type {
+  };
+
+  template<typename Prev, typename T, typename FT, typename... Rest>
+    requires std::same_as<Prev, T>
+  struct is_valid_path_t<Prev, FT T::*, Rest...>: is_valid_path_t<FT, Rest...> {
+  };
+
+  template<typename Root, typename... Fields>
+  constexpr bool is_valid_path = is_valid_path_t<Root, Fields...>::value;
+
   export class field_path {
     const type_info* root_type_;
     std::vector<const field_info*> fields_;
@@ -432,6 +467,20 @@ namespace refl {
     friend std::formatter<refl::field_path>;
 
     field_path() = delete;
+
+    template<typename... T>
+    field_path(auto T::*... fields) requires (is_valid_path<typename packtl::get_first<T
+                                                              ...>::type, decltype(fields)...>): root_type_(
+      &type_info::from<typename packtl::get_first<T...>::type>()) {
+      const type_info* current = root_type_;
+      ([&]<typename S>(auto S::* f) {
+        auto f_info = current->field_by_offset(offset_of(f));
+        if (f_info.has_value()) {
+          fields_.push_back(f_info.value());
+          current = &f_info->type();
+        }
+      }(fields), ...);
+    }
 
     explicit field_path(const type_info &root_type)
       : root_type_(&root_type) {
