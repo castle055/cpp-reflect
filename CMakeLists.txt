@@ -54,7 +54,7 @@ set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD "d0edc3af-4c50-42ea-a356-e2862fe7a444")
 set(CMAKE_CXX_MODULE_STD ON)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -pthread -fexperimental-library")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libstdc++ -pthread -fexperimental-library")
 
 project(cpp_reflect LANGUAGES CXX)
 
@@ -62,7 +62,6 @@ SET(CPP_REFLECT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 SET(CPP_REFLECT_TEST_DIR ${CPP_REFLECT_DIR}/test)
 SET(CPP_REFLECT_INCLUDE_DIR ${CPP_REFLECT_DIR}/include)
 SET(CPP_REFLECT_SOURCE_DIR ${CPP_REFLECT_DIR}/src)
-SET(CPP_REFLECT_APPS_DIR ${CPP_REFLECT_DIR}/apps)
 
 
 ################################################################################

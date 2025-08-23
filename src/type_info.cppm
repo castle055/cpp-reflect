@@ -158,7 +158,7 @@ namespace refl {
 
   public:
     template<typename T>
-    static inline const type_info &from() {
+    static const type_info &from() {
       using type                     = std::remove_const_t<std::remove_reference_t<T>>;
       static constexpr type_id_t tid = type_id<T>;
       static constexpr type_id_t pid = pack_type_id<T>;
@@ -669,7 +669,7 @@ namespace refl {
 export template<>
 struct std::hash<refl::field_path> {
   std::size_t operator()(const refl::field_path &path) const {
-    return std::hash<std::string>{}(path.to_string());
+    return std::hash<std::string> { }(path.to_string());
   }
 };
 

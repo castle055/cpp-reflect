@@ -19,31 +19,37 @@ export namespace serialize::policy {
     deep,
     skip
   };
-  template <typename F>
+
+  template<typename F>
   struct handle {
     F func;
   };
 }
 export namespace serialize {
   struct name {
-    std::string value;
+    const char* value;
+
+    explicit constexpr name(const char* value_) : value(value_) {
+    }
   };
 }
 
 
 export namespace formats {
-  template <typename Format, typename Args>
+  template<typename Format, typename Args>
   struct base {
     using args_t = Args;
     args_t args;
 
     explicit base(args_t args_)
-        : args(args_) {}
+      : args(args_) {
+    }
 
-    virtual ~base() {}
+    virtual ~base() {
+    }
 
-    template <typename O, refl::Reflected R, std::size_t I>
-    void print_obj_field_impl(O& out, const R& obj, std::size_t indent) {
+    template<typename O, refl::Reflected R, std::size_t I>
+    void print_obj_field_impl(O &out, const R &obj, std::size_t indent) {
       using f = refl::field<R, I>;
 
       for (std::size_t i = 0; i < std::max((indent * args.indent), 0UL); ++i) {
@@ -58,7 +64,7 @@ export namespace formats {
           // out << "🔒";
           out << "🔒";
           break;
-          // 🔓
+        // 🔓
         case refl::access_spec::PROTECTED:
           out << " \\";
           break;
@@ -76,7 +82,7 @@ export namespace formats {
 
       // if constexpr (f::access == field_access::PUBLIC) {
       if constexpr (std::is_reference_v<typename f::type>) {
-        const auto& it = f::from_instance(obj);
+        const auto &it = f::from_instance(obj);
         out << " {";
         out << std::format("0x{:X}", (std::size_t)&it);
         out << "} ";
@@ -101,7 +107,7 @@ export namespace formats {
         if constexpr (not refl::Reflected<typename f::type>) {
           out << " { ";
         }
-        const auto& it = f::from_instance(obj);
+        const auto &it = f::from_instance(obj);
         // const typename f::type& it =
         //   *(const typename f::type*)(((unsigned char*)&obj) + f::offset);
         print_any(out, it, indent);
@@ -114,8 +120,8 @@ export namespace formats {
       out << std::endl;
     }
 
-    template <typename O, refl::Reflected R, std::size_t... I>
-    void print_obj_impl(O& out, const R& obj, std::size_t indent, std::index_sequence<I...>) {
+    template<typename O, refl::Reflected R, std::size_t... I>
+    void print_obj_impl(O &out, const R &obj, std::size_t indent, std::index_sequence<I...>) {
       out << refl::type_name<R> << " {" << "\n";
       ((print_obj_field_impl<O, R, I>(out, obj, indent + 1)), ...);
       for (std::size_t i = 0; i < indent; ++i) {
@@ -126,8 +132,8 @@ export namespace formats {
       out << "}";
     }
 
-    template <typename O, refl::Reflected R, std::size_t I>
-    void print_obj_method(O& out, const R& obj) {
+    template<typename O, refl::Reflected R, std::size_t I>
+    void print_obj_method(O &out, const R &obj) {
       using m = refl::method<R, I>;
 
       switch (m::access) {
@@ -138,7 +144,7 @@ export namespace formats {
           // out << "🔒";
           out << "🔒";
           break;
-          // 🔓
+        // 🔓
         case refl::access_spec::PROTECTED:
           out << " \\";
           break;
@@ -151,8 +157,8 @@ export namespace formats {
       out << ": " << refl::type_name<typename m::type>;
     }
 
-    template <typename O, refl::Reflected R>
-    void print_obj(O& out, const R& obj, std::size_t indent = 0) {
+    template<typename O, refl::Reflected R>
+    void print_obj(O &out, const R &obj, std::size_t indent = 0) {
       print_obj_impl(out, obj, indent, std::make_index_sequence<refl::field_count<R>>());
 
       [&]<std::size_t... I>(std::index_sequence<I...>) {
@@ -160,8 +166,8 @@ export namespace formats {
       }(std::make_index_sequence<refl::method_count<R>>());
     }
 
-    template <typename O, typename T>
-    void print_std_iterable(O& out, const T& it, std::size_t indent) {
+    template<typename O, typename T>
+    void print_std_iterable(O &out, const T &it, std::size_t indent) {
       using item_type = typename T::value_type;
       out << "[" << std::endl;
       for (auto item = it.begin(); item != it.end(); ++item) {
@@ -170,7 +176,7 @@ export namespace formats {
         }
 
         if constexpr (std::is_reference_v<item_type>) {
-          const auto& value = *item;
+          const auto &value = *item;
           out << " {";
           out << std::format("0x{:X}", (std::size_t)&value);
           out << "} ";
@@ -197,7 +203,7 @@ export namespace formats {
           } else {
             out << " {";
           }
-          const auto& value = *item;
+          const auto &value = *item;
           // const typename f::type& it =
           //   *(const typename f::type*)(((unsigned char*)&obj) + f::offset);
           print_any(out, value, indent + 1);
@@ -213,14 +219,14 @@ export namespace formats {
       out << "]";
     }
 
-    template <typename O, typename T>
-    void print_std_pair(O& out, const T& it, std::size_t indent) {
+    template<typename O, typename T>
+    void print_std_pair(O &out, const T &it, std::size_t indent) {
       using item_type_1 = typename T::first_type;
       using item_type_2 = typename T::second_type;
       out << "[";
 
       if constexpr (std::is_reference_v<item_type_1>) {
-        const auto& value = it.first;
+        const auto &value = it.first;
         out << " {";
         out << std::format("0x{:X}", (std::size_t)&value);
         out << "} ";
@@ -247,7 +253,7 @@ export namespace formats {
         if constexpr (not refl::Reflected<item_type_1>) {
           out << "{";
         }
-        const auto& value = it.first;
+        const auto &value = it.first;
         // const typename f::type& it =
         //   *(const typename f::type*)(((unsigned char*)&obj) + f::offset);
         print_any(out, value, indent + 1);
@@ -257,7 +263,7 @@ export namespace formats {
       }
       out << ", ";
       if constexpr (std::is_reference_v<item_type_2>) {
-        const auto& value = it.second;
+        const auto &value = it.second;
         out << " {";
         out << std::format("0x{:X}", (std::size_t)&value);
         out << "} ";
@@ -282,7 +288,7 @@ export namespace formats {
         if constexpr (not refl::Reflected<item_type_2>) {
           out << "{";
         }
-        const auto& value = it.second;
+        const auto &value = it.second;
         // const typename f::type& it =
         //   *(const typename f::type*)(((unsigned char*)&obj) + f::offset);
         print_any(out, value, indent);
@@ -293,8 +299,8 @@ export namespace formats {
       out << "]";
     }
 
-    template <typename O, typename T>
-    void print_any(O& out, const T& it, std::size_t indent) {
+    template<typename O, typename T>
+    void print_any(O &out, const T &it, std::size_t indent) {
       if constexpr (packtl::is_type<std::vector, T>::value) {
         print_std_iterable(out, it, indent);
       } else if constexpr (packtl::is_type<std::list, T>::value) {
@@ -351,23 +357,23 @@ export namespace formats {
       }
     }
 
-    template <refl::Reflected R>
-    void visit(const R& obj) {
+    template<refl::Reflected R>
+    void visit(const R &obj) {
       self().handle_obj(obj);
     }
 
   private:
-    template <typename T>
-    void handle_obj(const T& obj) {
+    template<typename T>
+    void handle_obj(const T &obj) {
       visit_obj(obj);
     }
 
-    template <typename T>
-    void handle_reference(const T& obj) {
+    template<typename T>
+    void handle_reference(const T &obj) {
       self().handle_value(obj);
     }
 
-    template <typename T>
+    template<typename T>
     void handle_pointer(const T* obj) {
       if constexpr (not std::is_void_v<T>) {
         if (obj != nullptr) {
@@ -376,29 +382,29 @@ export namespace formats {
       }
     }
 
-    template <typename T, typename Field>
-    void handle_field(const T& obj) {
+    template<typename T, typename Field>
+    void handle_field(const T &obj) {
       visit_obj_field<T, Field>(obj);
     }
 
-    template <typename T>
-    void handle_iterable(const T& iterable) {
+    template<typename T>
+    void handle_iterable(const T &iterable) {
       visit_iterable(iterable);
     }
 
-    template <typename T>
-    void handle_value(const T& value) {
+    template<typename T>
+    void handle_value(const T &value) {
       visit_value(value);
     }
 
   protected:
-    template <typename T>
-    void visit_value(const T& obj) {
+    template<typename T>
+    void visit_value(const T &obj) {
       visit_any(obj);
     }
 
-    template <refl::Reflected R>
-    void visit_obj(const R& obj) {
+    template<refl::Reflected R>
+    void visit_obj(const R &obj) {
       [&]<std::size_t... I>(std::index_sequence<I...>) {
         (self().template handle_field<R, refl::field<R, I>>(obj), ...);
       }(std::make_index_sequence<refl::field_count<R>>());
@@ -408,53 +414,54 @@ export namespace formats {
       }(std::make_index_sequence<refl::method_count<R>>());
     }
 
-    template <refl::Reflected R, typename Field>
-    void visit_obj_field(const R& obj) {
+    template<refl::Reflected R, typename Field>
+    void visit_obj_field(const R &obj) {
       if constexpr (std::is_reference_v<typename Field::type>) {
-        const auto& it = Field::from_instance(obj);
+        const auto &it = Field::from_instance(obj);
         self().handle_reference(it);
       } else if constexpr (std::is_pointer_v<typename Field::type>) {
         const auto* it = Field::from_instance(obj);
         self().handle_pointer(it);
       } else {
-        const auto& it = Field::from_instance(obj);
+        const auto &it = Field::from_instance(obj);
         self().handle_value(it);
       }
     }
 
-    template <typename T>
-    void visit_iterable(const T& iterable) {
+    template<typename T>
+    void visit_iterable(const T &iterable) {
       using item_type = typename T::value_type;
       for (auto item = iterable.begin(); item != iterable.end(); ++item) {
         if constexpr (std::is_reference_v<item_type>) {
-          const auto& it = *item;
+          const auto &it = *item;
           self().handle_reference(it);
         } else if constexpr (std::is_pointer_v<item_type>) {
           const auto* it = *item;
           self().handle_pointer(it);
         } else {
-          const auto& it = *item;
+          const auto &it = *item;
           self().handle_value(it);
         }
       }
     }
 
   private:
-    auto& self() {
+    auto &self() {
       return *static_cast<Format*>(this);
     }
 
-    template <typename T>
-    void visit_std_pair(const T& it) {}
+    template<typename T>
+    void visit_std_pair(const T &it) {
+    }
 
-    template <refl::Reflected R, std::size_t I>
-    void visit_obj_method(const R& obj) {
+    template<refl::Reflected R, std::size_t I>
+    void visit_obj_method(const R &obj) {
 //      using m = refl::method<R, I>;
     }
 
   protected:
-    template <typename T>
-    void visit_any(const T& it) {
+    template<typename T>
+    void visit_any(const T &it) {
       if constexpr (packtl::is_type<std::vector, T>::value) {
         self().handle_iterable(it);
       } else if constexpr (packtl::is_type<std::list, T>::value) {
@@ -495,8 +502,8 @@ export namespace formats {
         //   out << std::format("0x{:X}", (std::size_t)value);
         //   out << "}: ";
         //   print_any(out, *value, indent);
-        } else if constexpr (refl::Reflected<T>) {
-          self().handle_obj(it);
+      } else if constexpr (refl::Reflected<T>) {
+        self().handle_obj(it);
         // } else if constexpr (std::is_convertible_v<T, std::string>) {
         //   out << std::format("{:?}", it);
         // } else if constexpr (std::same_as<T, char>) {
@@ -507,6 +514,6 @@ export namespace formats {
     }
 
   private:
-    std::unordered_set<std::size_t> visited_{};
+    std::unordered_set<std::size_t> visited_ { };
   };
 } // namespace formats

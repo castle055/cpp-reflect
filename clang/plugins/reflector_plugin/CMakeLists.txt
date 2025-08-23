@@ -5,7 +5,7 @@ if (CPP_REFLECT_PLUGIN_BUILD)
   list(APPEND LibEdit_INCLUDE_DIRS /usr/include/editline)
   list(APPEND LibEdit_LIBRARIES /usr/lib/libedit.so)
 
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -pthread")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libstdc++ -pthread")
   find_package(LLVM REQUIRED CONFIG)
   find_package(Clang REQUIRED CONFIG)
   if("${LLVM_VERSION_MAJOR}" VERSION_LESS 18)

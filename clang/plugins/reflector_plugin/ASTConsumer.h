@@ -439,19 +439,22 @@ public:
     }
 
     if ((D->isStruct() || D->isClass()) && (D->getDefinition() == D) && !D->isEnum()
-    /* &&
-        !D->isInAnotherModuleUnit() &&
-        (D->hasOwningModule() && !D->getOwningModule()->isGlobalModule())*/) {
+      /* &&
+          !D->isInAnotherModuleUnit() &&
+          (D->hasOwningModule() && !D->getOwningModule()->isGlobalModule())*/) {
       if (D->isTemplated() and not isa<ClassTemplateSpecializationDecl>(D)) {
+        return;
+      }
+      if (D->isInStdNamespace() or D->isInAnotherModuleUnit()) {
         return;
       }
       auto* record = dyn_cast<CXXRecordDecl>(D->getDefinition());
       add_type_info(record);
       // if (record->getName() == "test_one_field_struct") {
-        // record->dumpColor();
-        //   for (auto d: record->decls()) {
-        //     d->dumpColor();
-        //   }
+      // record->dumpColor();
+      //   for (auto d: record->decls()) {
+      //     d->dumpColor();
+      //   }
       // }
     }
   }
@@ -475,7 +478,7 @@ public:
         // llvm::outs() << "[ERROR] import "
         //              << id->getImportedModule()->getPrimaryModuleInterfaceName() << "\n";
         if (!module_usable && checkModuleUsable(id->getImportedModule())) {
-          // llvm::outs() << "[WARN] MODULE USABLE " << "\n";
+          module_usable = true;
         }
       }
 

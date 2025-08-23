@@ -37,7 +37,7 @@ export namespace refl {
     }
   };
 
-  template <template <typename> typename Format = formats::default_fmt>
+  template <template <typename> typename Format = formats::json_fmt>
   std::string to_string(const auto& obj, const typename Format<std::stringstream>::args_t& args = {}) {
     return serializer<Format>::to_string(obj, args);
   }
