@@ -153,6 +153,7 @@ namespace refl {
     void* data_;
     [[refl::ignore]]
     std::function<void(void*)> destructor_;
+    [[refl::ignore]]
     [[meta(eq_policy::shallow)]]
     const type_info* type_info_;
   };
@@ -257,6 +258,7 @@ namespace refl {
 
   private:
     void* data_;
+    [[refl::ignore]]
     const type_info* type_info_;
   };
 }

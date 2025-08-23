@@ -104,7 +104,7 @@ namespace {
           // S.EvaluateConvertedConstantExpression();
           APValue v{};
           APValue pv{};
-          S.EvaluateConvertedConstantExpression(expr_, expr_->getType(), v, Sema::CCEK_Noexcept, false, pv);
+          S.EvaluateConvertedConstantExpression(expr_, expr_->getType(), v, CCEKind::Noexcept, false, pv);
 
           auto* cexpr = ConstantExpr::Create(D->getASTContext(), expr_, v);
           // cexpr->setType(expr_->getType().withConst());
