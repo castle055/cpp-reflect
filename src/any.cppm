@@ -11,7 +11,6 @@ export import :type_info;
 
 namespace refl {
   export class any {
-  private:
     template<typename T>
       requires (not std::same_as<std::remove_reference_t<T>, any>)
     explicit any(T* t) {
@@ -34,7 +33,7 @@ namespace refl {
     any(const T &t) {
       using type  = std::remove_const_t<std::remove_reference_t<T>>;
       data_       = new type(t);
-      destructor_ = [](void* ptr) { delete static_cast<T*>(ptr); };
+      destructor_ = [](void* ptr) { delete static_cast<type*>(ptr); };
       type_info_  = &type_info::from<type>();
     }
 
@@ -43,7 +42,7 @@ namespace refl {
     any(T &&t) {
       using type  = std::remove_const_t<std::remove_reference_t<T>>;
       data_       = new type(std::forward<T>(t));
-      destructor_ = [](void* ptr) { delete static_cast<T*>(ptr); };
+      destructor_ = [](void* ptr) { delete static_cast<type*>(ptr); };
       type_info_  = &type_info::from<type>();
     }
 
@@ -152,7 +151,8 @@ namespace refl {
   private:
     void* data_;
     [[refl::ignore]]
-    std::function<void(void*)> destructor_;
+    // std::function<void(void*)> destructor_;
+    void (*destructor_)(void*);
     [[refl::ignore]]
     [[meta(eq_policy::shallow)]]
     const type_info* type_info_;

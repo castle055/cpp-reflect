@@ -12,13 +12,14 @@ module;
 export module reflect.marshal.formats.json;
 
 import std;
-
-import packtl;
 export import reflect;
+import packtl;
 
 import reflect.marshal.formats.base;
 
-using JSON = nlohmann::json;
+export namespace refl {
+  using JSON = nlohmann::json;
+}
 
 export namespace formats {
   template<typename O>
@@ -114,9 +115,9 @@ export namespace formats {
         using type = typename T::value_type;
         if constexpr (std::same_as<typename type::first_type, std::string> or
                       std::same_as<typename type::first_type, const std::string>) {
-          current() = JSON::object({ });
+          current() = refl::JSON::object({ });
           for (const auto &[first, second]: iterable) {
-            current()[first] = JSON { };
+            current()[first] = refl::JSON { };
             push(current()[first]);
             this->handle_value(second);
             pop();
@@ -124,7 +125,7 @@ export namespace formats {
           return;
         }
       }
-      current() = JSON::array({ });
+      current() = refl::JSON::array({ });
       push(current());
       this->visit_iterable(iterable);
       pop();
@@ -132,7 +133,7 @@ export namespace formats {
 
     template<typename T>
     void handle_iterable_element(const T &element) {
-      current().push_back(JSON { });
+      current().push_back(refl::JSON { });
       push(current().back());
       this->visit_iterable_element(element);
       pop();
@@ -141,13 +142,13 @@ export namespace formats {
     template<typename T>
     void handle_tuple(const T &tuple) {
       if constexpr (std::__is_pair<T> and std::same_as<typename T::first_type, std::string>) {
-        current()              = JSON::object({ });
-        current()[tuple.first] = JSON { };
+        current()              = refl::JSON::object({ });
+        current()[tuple.first] = refl::JSON { };
         push(current()[tuple.first]);
         this->handle_value(tuple.second);
         pop();
       } else {
-        current() = JSON::array({ });
+        current() = refl::JSON::array({ });
         push(current());
         this->visit_tuple(tuple);
         pop();
@@ -156,7 +157,7 @@ export namespace formats {
 
     template<typename T>
     void handle_tuple_element(const T &element) {
-      current().push_back(JSON { });
+      current().push_back(refl::JSON { });
       push(current().back());
       this->visit_tuple_element(element);
       pop();
@@ -174,7 +175,7 @@ export namespace formats {
         current_policy = Field::template get_metadata<serialize::policy::policy_e>;
         if constexpr (Field::template get_metadata<serialize::policy::policy_e> ==
                       serialize::policy::deep) {
-          current()[field_name] = JSON { };
+          current()[field_name] = refl::JSON { };
           push(current()[field_name]);
 
           if constexpr (Field::is_reference) {
@@ -191,7 +192,7 @@ export namespace formats {
           pop();
         } else if constexpr (Field::template get_metadata<serialize::policy::policy_e> ==
                              serialize::policy::shallow) {
-          current()[field_name] = JSON { };
+          current()[field_name] = refl::JSON { };
           push(current()[field_name]);
 
           if constexpr (Field::is_reference) {
@@ -209,7 +210,7 @@ export namespace formats {
           // do nothing
         }
       } else {
-        current()[field_name] = JSON { };
+        current()[field_name] = refl::JSON { };
         push(current()[field_name]);
 
         this->template visit_obj_field<T, Field>(obj);
@@ -226,18 +227,104 @@ export namespace formats {
 
     template<refl::Reflected R>
     void serialize(const R &obj) {
-      json_ = JSON::object({ });
+      json_ = refl::JSON::object({ });
       push(json_);
       this->visit(obj);
       out << json_.dump(args.pretty ? args.indent : -1);
     }
 
+    static refl::any deserialize(const std::string_view &str) {
+      refl::JSON obj = refl::JSON::parse(str);
+
+      if (obj.is_object()) {
+        refl::archive arc { };
+        deserialize_object(arc, obj);
+        return arc;
+      }
+      if (obj.is_array()) {
+        std::vector<refl::any> vec { };
+        deserialize_array(vec, obj);
+        return vec;
+      }
+
+      throw std::invalid_argument(std::format("Invalid JSON object: {}", obj.dump()));
+    }
+
+    static refl::any deserialize(const refl::JSON &obj) {
+      if (obj.is_object()) {
+        refl::archive arc { };
+        deserialize_object(arc, obj);
+        return arc;
+      }
+      if (obj.is_array()) {
+        std::vector<refl::any> vec { };
+        deserialize_array(vec, obj);
+        return vec;
+      }
+
+      throw std::invalid_argument(std::format("Invalid JSON object: {} {}", obj.type_name(), obj.dump()));
+    }
+
   private:
-    JSON &current() {
+    static void deserialize_object(refl::archive &arc, const refl::JSON &obj) {
+      for (const auto &it: obj.items()) {
+        const std::string &key  = it.key();
+        const refl::JSON &value = it.value();
+        if (value.is_object()) {
+          arc[key] = refl::archive { };
+          deserialize_object(arc[key].as<refl::archive>(), value);
+        } else if (value.is_array()) {
+          arc[key] = std::vector<refl::any> { };
+          deserialize_array(arc[key].as<std::vector<refl::any>>(), value);
+        } else if (value.is_boolean()) {
+          arc[key] = bool {value};
+        } else if (value.is_number_integer()) {
+          arc[key] = std::int64_t {value};
+        } else if (value.is_number_unsigned()) {
+          arc[key] = std::uint64_t {value};
+        } else if (value.is_number_float()) {
+          arc[key] = std::double_t {value};
+        } else if (value.is_string()) {
+          arc[key] = std::string {value};
+        } else if (value.is_null()) {
+          arc[key] = std::string {"null"};
+        } else {
+          throw std::invalid_argument(std::format("Invalid JSON object: {}", value.dump()));
+        }
+      }
+    }
+
+    static void deserialize_array(auto &vec, const refl::JSON &obj) {
+      for (auto &it: obj) {
+        if (it.is_object()) {
+          vec.emplace_back(refl::archive { });
+          deserialize_object(vec.back().template as<refl::archive>(), it);
+        } else if (it.is_array()) {
+          vec.emplace_back(std::vector<refl::any> { });
+          deserialize_array(vec.back().template as<std::vector<refl::any>>(), it);
+        } else if (it.is_boolean()) {
+          vec.emplace_back(bool {it});
+        } else if (it.is_number_integer()) {
+          vec.emplace_back(std::int64_t {it});
+        } else if (it.is_number_unsigned()) {
+          vec.emplace_back(std::uint64_t {it});
+        } else if (it.is_number_float()) {
+          vec.emplace_back(std::double_t {it});
+        } else if (it.is_string()) {
+          vec.emplace_back(std::string {it});
+        } else if (it.is_null()) {
+          vec.emplace_back(std::string {"null"});
+        } else {
+          throw std::invalid_argument(std::format("Invalid JSON object: {}", it.dump()));
+        }
+      }
+    }
+
+    refl::JSON &current() {
       return *obj_stack.top();
     }
 
-    void push(JSON &obj) {
+    void push(refl::JSON &obj) {
       obj_stack.push(&obj);
     }
 
@@ -249,8 +336,8 @@ export namespace formats {
     std::unordered_set<std::size_t> visited_ { };
     O &out;
     args_t args;
-    JSON json_;
-    std::stack<JSON*> obj_stack;
+    refl::JSON json_;
+    std::stack<refl::JSON*> obj_stack;
 
     serialize::policy::policy_e current_policy {serialize::policy::shallow};
   };

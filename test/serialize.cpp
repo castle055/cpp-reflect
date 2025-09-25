@@ -3,9 +3,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // #include <cassert>
-#include "common.h"
 
 import reflect;
+#include "common.h"
+
+import std;
 
 import packtl;
 import reflect.serialize;
@@ -26,7 +28,7 @@ TEST("Serialization") {
 
   refl::serializer<formats::json_fmt>::to_stream(std::cout, sm);
 
-  std::cout << refl::to_string<formats::json_fmt>(sm);
+  std::cout << refl::to_json(sm);
 
   return 0;
 }
@@ -67,8 +69,7 @@ struct test_one_field_struct {
 
 template <typename Field, template <typename> typename Format>
 int check_field_serialization(const std::string& serialized, Field default_value = {}) {
-  test_one_field_struct<Field> test_obj{};
-  test_obj.value = default_value;
+  test_one_field_struct<Field> test_obj{std::move(default_value)};
   return check_serializes_to<Format>(test_obj, serialized);
 }
 
@@ -169,6 +170,8 @@ TEST("JSON Std Int Map") {
 TEST("JSON Std Unordered Int Map") {
   return check_field_serialization<std::unordered_map<int, int>, formats::json_fmt>(
     "{\"value\":[[1,1],[2,2],[3,3],[4,4]]}", {{1, 1}, {2, 2}, {3, 3}, {4, 4}}
+  ) and check_field_serialization<std::unordered_map<int, int>, formats::json_fmt>(
+    "{\"value\":[[4,4],[3,3],[2,2],[1,1]]}", {{1, 1}, {2, 2}, {3, 3}, {4, 4}}
   );
 }
 TEST("JSON Std String Map") {
@@ -189,6 +192,8 @@ TEST("JSON Std Set") {
 TEST("JSON Std Unordered Set") {
   return check_field_serialization<std::unordered_set<int>, formats::json_fmt>(
     "{\"value\":[1,2,3,4]}", {1, 2, 3, 4}
+  ) and check_field_serialization<std::unordered_set<int>, formats::json_fmt>(
+    "{\"value\":[4,3,2,1]}", {1, 2, 3, 4}
   );
 }
 TEST("JSON Std Pair <Int, Int>") {
