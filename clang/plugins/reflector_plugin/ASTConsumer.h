@@ -454,9 +454,17 @@ public:
       if (D->isTemplated() and not isa<ClassTemplateSpecializationDecl>(D)) {
         return;
       }
-      if (D->isInStdNamespace() or D->isInAnotherModuleUnit()) {
+      if (D->isInStdNamespace()) {
         return;
       }
+
+      auto* parent = D->getParent();
+      if (D->isInAnotherModuleUnit() and not isa<ClassTemplateSpecializationDecl>(D)) {
+        if (parent == nullptr or not isa<ClassTemplateSpecializationDecl,CXXRecordDecl>(parent)) {
+          return;
+        }
+      }
+
       auto* record = dyn_cast<CXXRecordDecl>(D->getDefinition());
       add_type_info(record);
       // if (record->getName() == "test_one_field_struct") {
