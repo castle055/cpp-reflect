@@ -100,6 +100,18 @@ namespace refl {
     static std::vector<type_id_t> vector();
   };
 
+  template<typename T>
+  struct is_variant: std::false_type {
+  };
+
+  template<typename... Ts>
+  struct is_variant<std::variant<Ts...>>: std::true_type {
+  };
+
+  template<typename T>
+  constexpr bool is_variant_v = is_variant<std::remove_cv_t<std::remove_reference_t<T>>>::value;
+
+
   class type_info {
   private:
     template<typename Type>
@@ -227,6 +239,19 @@ namespace refl {
           ti.pack_param_ids_ = get_pack_param_ids<type>::vector();
         }
 
+        if constexpr (std::is_destructible_v<type>) {
+          ti.destructor_function_ = [](void* ptr) {
+            type* src_ref = static_cast<type*>(ptr);
+            std::destroy_at(src_ref);
+          };
+        }
+
+        if constexpr (std::is_default_constructible_v<T>) {
+          ti.default_constructor_ = []() -> void* {
+            return new type();
+          };
+        }
+
         if constexpr (std::is_copy_constructible_v<T>) {
           ti.copy_construct_function_ = [](const void* src) -> void* {
             const type &src_ref = *static_cast<const type*>(src);
@@ -258,6 +283,40 @@ namespace refl {
             return LHS == RHS;
           };
         }
+
+        if constexpr (is_variant_v<type>) {
+          ti.variant_get_index_ = [](const void* variant) {
+            const type &VARIANT = *static_cast<const type*>(variant);
+            return VARIANT.index();
+          };
+          ti.variant_get_value_type_ = [](const void* variant) {
+            const type &VARIANT = *static_cast<const type*>(variant);
+            return from<type>().pack_parameter_types()[VARIANT.index()];
+          };
+          ti.variant_get_value_ = [](const void* variant) {
+            const type &VARIANT = *static_cast<const type*>(variant);
+            return std::visit([](const auto &value) { return static_cast<const void*>(&value); }, VARIANT);
+          };
+          ti.variant_get_value_mutable_ = [](void* variant) {
+            type &VARIANT = *static_cast<type*>(variant);
+            return std::visit([](auto &value) { return static_cast<void*>(&value); }, VARIANT);
+          };
+          ti.variant_set_index_ = [](void* variant, std::size_t index, const void* value) {
+            type &VARIANT = *static_cast<type*>(variant);
+            if (index >= std::variant_size_v<type>) {
+              throw std::runtime_error(std::format("index ({}) out of range for variant: {}", index,
+                                                   refl::type_name<type>));
+            }
+            [&]<std::size_t... Idx>(std::index_sequence<Idx...>) {
+              ([&] {
+                if (index == Idx) {
+                  using item_type = std::variant_alternative_t<Idx, type>;
+                  VARIANT         = *static_cast<const item_type*>(value);
+                }
+              }(), ...);
+            }(std::make_index_sequence<std::variant_size_v<type>> { });
+          };
+        }
       }
 
       return ti;
@@ -268,6 +327,14 @@ namespace refl {
     }
 
     const std::string &name() const {
+      return name_;
+    }
+
+    std::string clean_name() const {
+      std::size_t last_colon = name_.find_last_of(':') + 1;
+      if (last_colon < name_.size()) {
+        return name_.substr(last_colon);
+      }
       return name_;
     }
 
@@ -336,6 +403,10 @@ namespace refl {
       return is_ptr_;
     }
 
+    bool is_variant() const {
+      return variant_get_index_ != nullptr;
+    }
+
     const type_info &indirect_type() const {
       if (indirect_type_id_.has_value()) {
         return type_registry[indirect_type_id_.value()];
@@ -350,6 +421,19 @@ namespace refl {
         tis.emplace_back(&type_registry[tid]);
       }
       return tis;
+    }
+
+    void* default_constructor() const {
+      if (nullptr != default_constructor_) {
+        return default_constructor_();
+      }
+      return nullptr;
+    }
+
+    void destructor(void* ptr) const {
+      if (nullptr != destructor_function_) {
+        destructor_function_(ptr);
+      }
     }
 
     void* make_copy_of(const void* ptr) const {
@@ -372,6 +456,40 @@ namespace refl {
       return false;
     }
 
+    std::size_t variant_get_index(const void* variant) const {
+      if (nullptr != variant_get_index_) {
+        return variant_get_index_(variant);
+      }
+      return std::numeric_limits<std::size_t>::max();
+    }
+
+    const type_info* variant_get_value_type(const void* variant) const {
+      if (nullptr != variant_get_value_type_) {
+        return variant_get_value_type_(variant);
+      }
+      return nullptr;
+    }
+
+    const void* variant_get_value(const void* variant) const {
+      if (nullptr != variant_get_value_) {
+        return variant_get_value_(variant);
+      }
+      return nullptr;
+    }
+
+    void* variant_get_value(void* variant) const {
+      if (nullptr != variant_get_value_mutable_) {
+        return variant_get_value_mutable_(variant);
+      }
+      return nullptr;
+    }
+
+    void variant_set_index(void* variant, std::size_t index, const void* value) const {
+      if (nullptr != variant_set_index_) {
+        return variant_set_index_(variant, index, value);
+      }
+    }
+
   private:
     std::string name_ { };
     std::list<field_info> fields_ { };
@@ -391,6 +509,12 @@ namespace refl {
     std::vector<type_id_t> pack_param_ids_ { };
 
     [[refl::ignore]]
+    void*(* default_constructor_)() {nullptr};
+
+    [[refl::ignore]]
+    void (* destructor_function_)(void*) {nullptr};
+
+    [[refl::ignore]]
     void*(* copy_construct_function_)(const void*) {nullptr};
 
     [[refl::ignore]]
@@ -398,6 +522,21 @@ namespace refl {
 
     [[refl::ignore]]
     bool (* equality_function_)(const void*, const void*) {nullptr};
+
+    [[refl::ignore]]
+    std::size_t (* variant_get_index_)(const void*) {nullptr};
+
+    [[refl::ignore]]
+    const type_info* (* variant_get_value_type_)(const void*) {nullptr};
+
+    [[refl::ignore]]
+    const void* (* variant_get_value_)(const void*) {nullptr};
+
+    [[refl::ignore]]
+    void* (* variant_get_value_mutable_)(void*) {nullptr};
+
+    [[refl::ignore]]
+    void (* variant_set_index_)(void*, std::size_t, const void*) {nullptr};
   };
 
 
@@ -470,14 +609,14 @@ namespace refl {
 
     template<typename... T>
     field_path(auto T::*... fields) requires (is_valid_path<typename packtl::get_first<T
-                                                              ...>::type, decltype(fields)...>): root_type_(
+                                                              ...>::type, decltype(fields)...>) : root_type_(
       &type_info::from<typename packtl::get_first<T...>::type>()) {
       const type_info* current = root_type_;
       ([&]<typename S>(auto S::* f) {
         auto f_info = current->field_by_offset(offset_of(f));
         if (f_info.has_value()) {
           fields_.push_back(f_info.value());
-          current = &f_info->type();
+          current = &f_info.value()->type();
         }
       }(fields), ...);
     }

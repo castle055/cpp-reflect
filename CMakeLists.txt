@@ -69,14 +69,6 @@ SET(CPP_REFLECT_SOURCE_DIR ${CPP_REFLECT_DIR}/src)
 ################################################################################
 include(FetchContent)
 
-#[[                            CONFIGURE PACKTL                              ]]#
-FetchContent_Declare(packtl
-        GIT_REPOSITORY https://github.com/castle055/packtl.git
-        GIT_TAG main
-        FIND_PACKAGE_ARGS
-)
-FetchContent_MakeAvailable(packtl)
-
 ################################################################################
 #[[                         CONFIGURE CLANG PLUGINS                          ]]#
 add_subdirectory(clang)
@@ -100,6 +92,14 @@ endif()
 macro(compile_target_with_reflection TARGET)
     set_target_properties(${TARGET} PROPERTIES COMPILE_FLAGS "-fplugin=${REFLECTOR_PLUGIN_BINARY}")
 endmacro(compile_target_with_reflection)
+
+#[[                            CONFIGURE PACKTL                              ]]#
+FetchContent_Declare(packtl
+        GIT_REPOSITORY https://github.com/castle055/packtl.git
+        GIT_TAG main
+        FIND_PACKAGE_ARGS
+)
+FetchContent_MakeAvailable(packtl)
 
 ################################################################################
 #[[                          CONFIGURE CPP REFLECT                           ]]#

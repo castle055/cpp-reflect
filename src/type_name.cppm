@@ -23,31 +23,31 @@ import std;
 
 import :types;
 
-export namespace refl {
-  namespace detail { // Yoinked from JDH's implementation
+export namespace refl { namespace detail {
+    // Yoinked from JDH's implementation
     // type_name adapted from:
     // https://bitwizeshift.github.io/posts/2021/03/09/getting-an-unmangled-type-name-at-compile-time/
-    template <std::size_t... Is>
+    template<std::size_t... Is>
     constexpr auto substring_as_array(std::string_view s, std::index_sequence<Is...>) {
-      return std::array{s[Is]..., '\0'};
+      return std::array {s[Is]..., '\0'};
     }
 
-    template <typename T>
+    template<typename T>
     constexpr auto type_name_array() {
 #if defined(__clang__)
-      static constexpr auto prefix = std::string_view{"[T = "};
-      static constexpr auto suffix = std::string_view{"]"};
+      static constexpr auto prefix = std::string_view {"[T = "};
+      static constexpr auto suffix = std::string_view {"]"};
 #elif defined(__GNUC__)
-      constexpr auto prefix = std::string_view{"with T = "};
-      constexpr auto suffix = std::string_view{"]"};
+      constexpr auto prefix = std::string_view {"with T = "};
+      constexpr auto suffix = std::string_view {"]"};
 #elif defined(_MSC_VER)
-      constexpr auto prefix = std::string_view{"type_name_array<"};
-      constexpr auto suffix = std::string_view{">(void)"};
+      constexpr auto prefix = std::string_view {"type_name_array<"};
+      constexpr auto suffix = std::string_view {">(void)"};
 #else
 #error "unsupported compiler (type_name_array)"
 #endif
 
-      static constexpr auto function = std::string_view{REFL_PRETTY_FUNCTION};
+      static constexpr auto function = std::string_view {REFL_PRETTY_FUNCTION};
       static constexpr auto start    = function.find(prefix) + prefix.size();
       static constexpr auto end      = function.rfind(suffix);
 
@@ -56,25 +56,25 @@ export namespace refl {
       // As of right now, this next line shows an error in the IDE because it thinks
       // that 'size' is maybe not known at compile time. Making this function a consteval
       // didn't help. Don't know how to silence this. It compiles fine.
-      return substring_as_array(function.substr(start, (end - start)), std::make_index_sequence<(end - start)>{});
+      return substring_as_array(function.substr(start, (end - start)), std::make_index_sequence<(end - start)> { });
     }
 
-    template <template <typename...> typename Pack>
+    template<template <typename...> typename Pack>
     constexpr auto type_name_array_pack() {
 #if defined(__clang__)
-      static constexpr auto prefix = std::string_view{"[Pack = "};
-      static constexpr auto suffix = std::string_view{"]"};
+      static constexpr auto prefix = std::string_view {"[Pack = "};
+      static constexpr auto suffix = std::string_view {"]"};
 #elif defined(__GNUC__)
-      constexpr auto prefix = std::string_view{"with T = "};
-      constexpr auto suffix = std::string_view{"]"};
+      constexpr auto prefix = std::string_view {"with T = "};
+      constexpr auto suffix = std::string_view {"]"};
 #elif defined(_MSC_VER)
-      constexpr auto prefix = std::string_view{"type_name_array<"};
-      constexpr auto suffix = std::string_view{">(void)"};
+      constexpr auto prefix = std::string_view {"type_name_array<"};
+      constexpr auto suffix = std::string_view {">(void)"};
 #else
 #error "unsupported compiler (type_name_array)"
 #endif
 
-      static constexpr auto function = std::string_view{REFL_PRETTY_FUNCTION};
+      static constexpr auto function = std::string_view {REFL_PRETTY_FUNCTION};
       static constexpr auto start    = function.find(prefix) + prefix.size();
       static constexpr auto end      = function.rfind(suffix);
 
@@ -83,24 +83,25 @@ export namespace refl {
       // As of right now, this next line shows an error in the IDE because it thinks
       // that 'size' is maybe not known at compile time. Making this function a consteval
       // didn't help. Don't know how to silence this. It compiles fine.
-      return substring_as_array(function.substr(start, (end - start)), std::make_index_sequence<(end - start)>{});
+      return substring_as_array(function.substr(start, (end - start)), std::make_index_sequence<(end - start)> { });
     }
-    template <template <typename T, std::size_t I> typename Pack>
+
+    template<template <typename T, std::size_t I> typename Pack>
     constexpr auto type_name_array_pack_1t1i() {
 #if defined(__clang__)
-      static constexpr auto prefix = std::string_view{"[T = "};
-      static constexpr auto suffix = std::string_view{"]"};
+      static constexpr auto prefix = std::string_view {"[T = "};
+      static constexpr auto suffix = std::string_view {"]"};
 #elif defined(__GNUC__)
-      constexpr auto prefix = std::string_view{"with T = "};
-      constexpr auto suffix = std::string_view{"]"};
+      constexpr auto prefix = std::string_view {"with T = "};
+      constexpr auto suffix = std::string_view {"]"};
 #elif defined(_MSC_VER)
-      constexpr auto prefix = std::string_view{"type_name_array<"};
-      constexpr auto suffix = std::string_view{">(void)"};
+      constexpr auto prefix = std::string_view {"type_name_array<"};
+      constexpr auto suffix = std::string_view {">(void)"};
 #else
 #error "unsupported compiler (type_name_array)"
 #endif
 
-      static constexpr auto function = std::string_view{REFL_PRETTY_FUNCTION};
+      static constexpr auto function = std::string_view {REFL_PRETTY_FUNCTION};
       static constexpr auto start    = function.find(prefix) + prefix.size();
       static constexpr auto end      = function.rfind(suffix);
 
@@ -109,24 +110,38 @@ export namespace refl {
       // As of right now, this next line shows an error in the IDE because it thinks
       // that 'size' is maybe not known at compile time. Making this function a consteval
       // didn't help. Don't know how to silence this. It compiles fine.
-      return substring_as_array(function.substr(start, (end - start)), std::make_index_sequence<(end - start)>{});
+      return substring_as_array(function.substr(start, (end - start)), std::make_index_sequence<(end - start)> { });
     }
 
 
-    template <typename T>
+    template<typename T>
     constexpr auto type_name_str() {
       static constexpr auto val = type_name_array<T>();
-      return std::string_view{val.data(), val.size() - 1};
+      return std::string_view {val.data(), val.size() - 1};
     }
-    template <template <typename...> typename Pack>
+
+    template<typename T>
+    constexpr auto type_name_str_no_namespace() {
+      static constexpr auto val       = type_name_array<T>();
+      static constexpr auto full_name = std::string_view {val.data(), val.size() - 1};
+      static constexpr auto start     = full_name.find_last_of(':') + 1;
+      if (start >= full_name.size()) {
+        return full_name;
+      } else {
+        return full_name.substr(start, full_name.size() - start);
+      }
+    }
+
+    template<template <typename...> typename Pack>
     constexpr auto type_name_str_pack() {
       static constexpr auto val = type_name_array_pack<Pack>();
-      return std::string_view{val.data(), val.size() - 1};
+      return std::string_view {val.data(), val.size() - 1};
     }
-    template <template <typename T, std::size_t I> typename Pack>
+
+    template<template <typename T, std::size_t I> typename Pack>
     constexpr auto type_name_str_pack_1t1i() {
       static constexpr auto val = type_name_array_pack_1t1i<Pack>();
-      return std::string_view{val.data(), val.size() - 1};
+      return std::string_view {val.data(), val.size() - 1};
     }
 
 
@@ -151,42 +166,46 @@ export namespace refl {
     constexpr std::uint64_t fnv1a(std::string_view s) {
       return fnv1a_append(14695981039346656037u, s);
     }
-
   } // namespace detail
 
-  template <typename T>
+  template<typename T>
   constexpr auto type_name = detail::type_name_str<T>();
 
-  template <template <typename...> typename Pack>
+  template<typename T>
+  constexpr auto type_name_clean = detail::type_name_str_no_namespace<T>();
+
+  template<template <typename...> typename Pack>
   constexpr auto pack_name = detail::type_name_str_pack<Pack>();
 
-  template <template <typename T, std::size_t I> typename Pack>
+  template<template <typename T, std::size_t I> typename Pack>
   constexpr auto pack_1t1i_name = detail::type_name_str_pack_1t1i<Pack>();
 
-  template <typename T>
+  template<typename T>
   constexpr type_id_t type_id = detail::fnv1a(type_name<T>);
 
-  template <template <typename...> typename Pack>
+  template<template <typename...> typename Pack>
   constexpr type_id_t pack_id = detail::fnv1a(pack_name<Pack>);
 
-  template <template <typename T, std::size_t I> typename Pack>
+  template<template <typename T, std::size_t I> typename Pack>
   constexpr type_id_t pack_1t1i_id = detail::fnv1a(pack_1t1i_name<Pack>);
 
   namespace detail {
-    template <typename T>
+    template<typename T>
     struct pack_type_id {
       static constexpr type_id_t value = type_id<T>;
     };
-    template <template <typename...> typename Pack, typename... Ts>
+
+    template<template <typename...> typename Pack, typename... Ts>
     struct pack_type_id<Pack<Ts...>> {
       static constexpr type_id_t value = pack_id<Pack>;
     };
-    template <template <typename, std::size_t> typename Pack, typename T, std::size_t I>
+
+    template<template <typename, std::size_t> typename Pack, typename T, std::size_t I>
     struct pack_type_id<Pack<T, I>> {
       static constexpr type_id_t value = pack_1t1i_id<Pack>;
     };
   }
 
-  template <typename T>
+  template<typename T>
   constexpr type_id_t pack_type_id = detail::pack_type_id<T>::value;
 }
