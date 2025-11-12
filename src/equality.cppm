@@ -187,4 +187,8 @@ namespace refl {
 
     return impl(std::make_index_sequence<count> { });
   }
+
+  export inline constexpr bool operator==(const Reflected auto& lhs, const Reflected auto& rhs) {
+    return refl::deep_eq(lhs, rhs);
+  }
 }
