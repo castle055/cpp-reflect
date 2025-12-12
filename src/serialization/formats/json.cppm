@@ -101,7 +101,7 @@ export namespace formats {
                            std::same_as<T, float> or std::same_as<T, double>) {
         current() = it;
       } else if constexpr (std::same_as<T, bool>) {
-        current() = std::format("{}", it ? "true" : "false");
+        current() = it ? true : false;
       } else if constexpr (std::formattable<T, char>) {
         current() = std::format("{}", it);
       }
