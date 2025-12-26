@@ -118,7 +118,7 @@ struct [[refl::annotation]] ignore {};
 
 struct [[refl::annotation]] json_name {
   // consteval explicit json_name(std::string&& name_): name(name_) {}
-  std::string name;
+  std::string_view name;
 };
 
 template <typename F>

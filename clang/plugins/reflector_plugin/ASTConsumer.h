@@ -85,7 +85,7 @@ public:
 
 
     QualType PackSpecialization =
-      Compiler->getSema().CheckTemplateIdType(ElaboratedTypeKeyword::Typename, PackTemplate.value(), record->getBeginLoc(), TemplateArgs);
+      Compiler->getSema().CheckTemplateIdType(ElaboratedTypeKeyword::Typename, PackTemplate.value(), record->getBeginLoc(), TemplateArgs, nullptr, false);
 
     // Create TypeAliasDecl for 'using field_types = refl_pack<...>'
     TypeAliasDecl* FieldTypesAlias = TypeAliasDecl::Create(
@@ -117,7 +117,7 @@ public:
   }
 
   QualType specialize_template(const TemplateName &template_, TemplateArgumentListInfo &args) {
-    return Compiler->getSema().CheckTemplateIdType(ElaboratedTypeKeyword::Typename, template_, SourceLocation { }, args);
+    return Compiler->getSema().CheckTemplateIdType(ElaboratedTypeKeyword::Typename, template_, SourceLocation { }, args, nullptr, false);
   }
 
   void add_integer_list(
@@ -256,7 +256,7 @@ public:
 
     QualType TupleSpecialization =
       Compiler->getSema()
-              .CheckTemplateIdType(ElaboratedTypeKeyword::Typename, TupleTemplate, record->getBeginLoc(), TemplateArgs)
+              .CheckTemplateIdType(ElaboratedTypeKeyword::Typename, TupleTemplate, record->getBeginLoc(), TemplateArgs, nullptr, false)
               .withConst();
     TypeSourceInfo* TSI = Context->getTrivialTypeSourceInfo(TupleSpecialization);
 
