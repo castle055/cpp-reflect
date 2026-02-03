@@ -94,33 +94,34 @@ namespace refl::deep_eq_impl {
 
   template<typename T>
   bool ref_eq(const T &lhs, const T &rhs) {
-    if constexpr (packtl::is_type<std::vector, T>::value) {
+    using value_type = std::remove_const_t<T>;
+    if constexpr (packtl::is_type<std::vector, value_type>::value) {
       return std_iterable_eq(lhs, rhs);
-    } else if constexpr (packtl::is_type<std::list, T>::value) {
+    } else if constexpr (packtl::is_type<std::list, value_type>::value) {
       return std_iterable_eq(lhs, rhs);
-    } else if constexpr (packtl::is_type<std::deque, T>::value) {
+    } else if constexpr (packtl::is_type<std::deque, value_type>::value) {
       return std_iterable_eq(lhs, rhs);
-    } else if constexpr (packtl::is_type<std::queue, T>::value) {
+    } else if constexpr (packtl::is_type<std::queue, value_type>::value) {
       return std_iterable_eq(lhs.__get_container(), rhs.__get_container());
-    } else if constexpr (packtl::is_type<std::stack, T>::value) {
+    } else if constexpr (packtl::is_type<std::stack, value_type>::value) {
       return std_iterable_eq(lhs, rhs);
-    } else if constexpr (packtl::is_type<std::map, T>::value) {
+    } else if constexpr (packtl::is_type<std::map, value_type>::value) {
       return std_map_eq(lhs, rhs);
-    } else if constexpr (packtl::is_type<std::unordered_map, T>::value) {
+    } else if constexpr (packtl::is_type<std::unordered_map, value_type>::value) {
       return std_map_eq(lhs, rhs);
-    } else if constexpr (packtl::is_type<std::set, T>::value) {
+    } else if constexpr (packtl::is_type<std::set, value_type>::value) {
       return std_iterable_eq(lhs, rhs);
-    } else if constexpr (packtl::is_type<std::unordered_set, T>::value) {
+    } else if constexpr (packtl::is_type<std::unordered_set, value_type>::value) {
       return std_iterable_eq(lhs, rhs);
-    } else if constexpr (packtl::is_type<std::pair, T>::value) {
+    } else if constexpr (packtl::is_type<std::pair, value_type>::value) {
       return std_pair_eq(lhs, rhs);
-    } else if constexpr (packtl::is_type<std::function, T>::value) {
+    } else if constexpr (packtl::is_type<std::function, value_type>::value) {
       return std_function_eq(lhs, rhs);
-    } else if constexpr (packtl::is_type<std::tuple, T>::value) {
+    } else if constexpr (packtl::is_type<std::tuple, value_type>::value) {
       return std_tuple_eq(lhs, rhs);
     } else if constexpr (std::equality_comparable<T>) {
       return lhs == rhs;
-    } else if constexpr (Reflected<T>) {
+    } else if constexpr (Reflected<value_type>) {
       return deep_eq(lhs, rhs);
     } else {
       return false;
