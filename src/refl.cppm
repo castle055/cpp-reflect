@@ -14,6 +14,7 @@ export import :types;
 export import :type_name;
 export import :accessors;
 export import :type_info;
+export import :field_path;
 export import :visitor;
 
 export import :equality;
