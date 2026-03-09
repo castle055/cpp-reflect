@@ -285,7 +285,25 @@ namespace refl {
           ti.equality_function_ = [](const void* lhs, const void* rhs) {
             const type &LHS = *static_cast<const type*>(lhs);
             const type &RHS = *static_cast<const type*>(rhs);
-            return LHS == RHS;
+            if constexpr (std::ranges::input_range<type>) {
+              if constexpr (requires (type t){{t.size()} -> std::convertible_to<std::size_t>;}) {
+                const std::size_t lhs_size = LHS.size();
+                const std::size_t rhs_size = RHS.size();
+                if (lhs_size != rhs_size) {
+                  return false;
+                }
+              }
+              using element_type = std::ranges::range_value_t<type>;
+              const auto& ti = type_info::from<element_type>();
+              for (auto l = LHS.begin(), r = RHS.begin(); l != LHS.end() and r != RHS.end(); ++l, ++r) {
+                if (not ti.equality(&*l, &*r)) {
+                  return false;
+                }
+              }
+              return true;
+            } else {
+              return LHS == RHS;
+            }
           };
         }
 
