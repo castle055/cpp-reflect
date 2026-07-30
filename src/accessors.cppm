@@ -5,6 +5,8 @@
  *! \brief
  *!
  */
+module;
+#include <meta>
 
 export module reflect:accessors;
 
@@ -26,6 +28,8 @@ struct representation<Type, 0> {
   Type value;
 };
 
+namespace detail {
+}
 
 export namespace refl {
 
@@ -36,7 +40,7 @@ export namespace refl {
     PUBLIC    = 3U,
   };
 
-  template <refl::Reflected T, std::size_t I>
+  template <typename T, std::size_t I>
   struct field {
     static constexpr std::size_t index = I;
     static constexpr const char* name  = static_type_info<T>::field_names[I];
@@ -106,15 +110,15 @@ export namespace refl {
     }
   };
 
-  template <refl::Reflected T>
+  template <typename T>
   constexpr std::size_t field_count =
     packtl::get_size<typename static_type_info<T>::field_types>::value;
 
-  template <refl::Reflected T, std::size_t I>
+  template <typename T, std::size_t I>
   constexpr decltype(std::get<I>(static_type_info<T>::field_metadata)) field_meta =
     std::get<I>(static_type_info<T>::field_metadata);
 
-  template <refl::Reflected T, std::size_t I>
+  template <typename T, std::size_t I>
   struct method {
     static constexpr std::size_t index = I;
     static constexpr const char* name  = static_type_info<T>::method_names[I];
@@ -123,11 +127,11 @@ export namespace refl {
       access_spec{packtl::get<I, typename static_type_info<T>::method_access_specifiers>::value};
   };
 
-  template <refl::Reflected T>
+  template <typename T>
   constexpr std::size_t method_count =
     packtl::get_size<typename static_type_info<T>::method_types>::value;
 
-  template <Reflected R, template <Reflected, typename> typename Fun, typename... Args>
+  template <typename R, template <typename, typename> typename Fun, typename... Args>
   auto for_each_field(Args&&... args) {
     static constexpr auto count = field_count<R>;
 

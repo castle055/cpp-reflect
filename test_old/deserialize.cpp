@@ -4,13 +4,14 @@
 // #include <cassert>
 
 import reflect;
-#include "common.h"
+#include "gtest/gtest.h"
 
 import std;
 
 import packtl;
 import reflect.deserialize;
 import reflect.serialize;
+// import reflect.optics;
 
 void setup() {
 }
@@ -21,7 +22,11 @@ struct serialize_me {
   serialize_me* next = nullptr;
 };
 
-TEST("Deserialization") {
+TEST(Deserialization, Deserialize) {
+  // static_assert(refl::Reflected<serialize_me>);
+  // static_assert(refl::Reflected<template_test<serialize_me>>);
+  // static_assert(refl::Reflected<template_test<serialize_me>::inner2>);
+  // static_assert(refl::Reflected<template_test<serialize_me>::inner2::inner>);
   // serialize_me sm1{};
   // serialize_me sm{};
   // sm.next = &sm1;
@@ -32,6 +37,4 @@ TEST("Deserialization") {
   std::cout << refl::to_json(sm1) << std::endl;
   auto sm = refl::from_json<serialize_me>(R"json({"a":123,"str":"Holy shit! this seems to work (for now)"})json");
   std::cout << refl::to_json(sm) << std::endl;
-
-  return 0;
 }

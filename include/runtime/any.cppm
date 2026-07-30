@@ -7,17 +7,25 @@ export module reflect:any;
 
 import std;
 
+export import reflect.TypeInfo;
 export import :type_info;
 
 namespace refl {
   export class any {
+    void* data_;
+    [[refl::ignore]]
+    void (*destructor_)(void*);
+    [[refl::ignore]]
+    [[meta(eq_policy::shallow)]]
+    const TypeInfo* type_info_;
+
     template<typename T>
       requires (not std::same_as<std::remove_reference_t<T>, any>)
     explicit any(T* t) {
       using type  = std::remove_const_t<std::remove_reference_t<T>>;
       data_       = t;
       destructor_ = [](void* ptr) { delete static_cast<type*>(ptr); };
-      type_info_  = &type_info::from<type>();
+      type_info_  = &TypeInfo::from<type>();
     }
 
   public:
@@ -62,9 +70,9 @@ namespace refl {
       return any {ptr};
     }
 
-    static any make(const refl::type_info &t_info, const void* ptr) {
+    static any make(const TypeInfo &t_info, const void* ptr) {
       any a { };
-      a.data_      = t_info.make_copy_of(ptr);
+      a.data_      = t_info.copy_construct(ptr);
       a.type_info_ = &t_info;
       return a;
     }
@@ -77,7 +85,7 @@ namespace refl {
     any(const any &other) {
       type_info_ = other.type_info_;
       if (type_info_ != nullptr) {
-        data_ = type_info_->make_copy_of(other.data_);
+        data_ = type_info_->copy_construct(other.data_);
       }
       destructor_ = other.destructor_;
     }
@@ -94,7 +102,7 @@ namespace refl {
         if (data_ != nullptr) {
           type_info_->assign_copy_of(other.data_, data_);
         } else {
-          data_ = type_info_->make_copy_of(other.data_);
+          data_ = type_info_->copy_construct(other.data_);
         }
       }
       destructor_ = other.destructor_;
@@ -147,15 +155,6 @@ namespace refl {
       }
       return type_info_ == other.type_info_ and type_info_->equality(data_, other.data_);
     }
-
-  private:
-    void* data_;
-    [[refl::ignore]]
-    // std::function<void(void*)> destructor_;
-    void (*destructor_)(void*);
-    [[refl::ignore]]
-    [[meta(eq_policy::shallow)]]
-    const type_info* type_info_;
   };
 
   export class any_ref {

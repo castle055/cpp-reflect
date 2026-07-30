@@ -17,6 +17,8 @@ export import :equality;
 
 
 namespace refl {
+  using type_id_t = std::size_t;
+
   export class type_info;
   std::map<type_id_t, type_info> type_registry { };
 

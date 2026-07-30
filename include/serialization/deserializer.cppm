@@ -17,6 +17,17 @@ export import reflect.marshal.formats.base;
 export import reflect.marshal.formats.default_fmt;
 export import reflect.marshal.formats.json;
 
+export template <typename T>
+struct template_test {
+  T value;
+  struct inner2 {
+    T val;
+    struct inner {
+      T val;
+    };
+  };
+};
+
 export namespace refl {
   struct deserializer_options {
     bool ignore_missing  = true;

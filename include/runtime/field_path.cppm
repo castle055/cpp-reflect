@@ -222,13 +222,13 @@ namespace refl {
     }
 
     std::string to_string() const {
-      std::string ss;
-      ss = std::format("({}){}::", depth(), root_type().name());
+      std::stringstream ss;
+      ss << std::format("({}){}::", depth(), root_type().name());
       for (int i = 0; i < fields_.size() - 1; ++i) {
-        ss = std::format("{}{}.", ss, fields_[i]->name);
+        ss << std::format("{}.", fields_[i]->name);
       }
-      ss = std::format("{}{}", ss, fields_[fields_.size() - 1]->name);
-      return ss;
+      ss << fields_[fields_.size() - 1]->name;
+      return ss.str();
     }
 
     static std::optional<field_path> from_string(const type_info &t_info, const std::string &str) {
